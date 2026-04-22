@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta
-from types import SimpleNamespace
 
 import config
 import main

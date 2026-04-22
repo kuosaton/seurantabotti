@@ -11,13 +11,13 @@ from types import SimpleNamespace
 import httpx
 from dotenv import load_dotenv
 
-load_dotenv()
-
 import config
 from clients.kuluttajaliitto import build_context, fetch_statements
 from clients.lausuntopalvelu import fetch_recent, proposal_has_recipient
 from delivery.email import build_daily_digest, send_email
 from processing.llm_scorer import score_item
+
+load_dotenv()
 
 UTC = timezone.utc
 
@@ -98,9 +98,13 @@ def cmd_daily(dry_run: bool) -> None:
         proposals = fetch_recent(client, top=config.LAUSUNTOPALVELU_FETCH_TOP)
 
     today = datetime.now(UTC).date()
-    open_proposals = [p for p in proposals if p.deadline is None or p.deadline.date() >= today]
+    open_proposals = [
+        p for p in proposals if p.deadline is None or p.deadline.date() >= today
+    ]
     new_proposals = [p for p in open_proposals if p.id not in seen]
-    print(f"  {len(proposals)} fetched, {len(open_proposals)} open, {len(new_proposals)} new")
+    print(
+        f"  {len(proposals)} fetched, {len(open_proposals)} open, {len(new_proposals)} new"
+    )
 
     if not new_proposals:
         print("Nothing new to score.")
@@ -190,7 +194,9 @@ def cmd_daily(dry_run: bool) -> None:
     _save_json(config.SEEN_PROPOSALS_PATH, seen)
 
     if not flagged:
-        print(f"No items above notify threshold. Logged {total_logged} borderline items.")
+        print(
+            f"No items above notify threshold. Logged {total_logged} borderline items."
+        )
         return
 
     print(f"\n{len(flagged)} item(s) above threshold:")
@@ -237,7 +243,9 @@ def cmd_review_logged(days: int = 7) -> None:
             except json.JSONDecodeError:
                 continue
             score = entry.get("score", 0)
-            ts = datetime.fromisoformat(entry["timestamp"].rstrip("Z")).replace(tzinfo=UTC)
+            ts = datetime.fromisoformat(entry["timestamp"].rstrip("Z")).replace(
+                tzinfo=UTC
+            )
             if ts.timestamp() < cutoff:
                 continue
             if score >= config.NOTIFY_THRESHOLD:
@@ -247,7 +255,9 @@ def cmd_review_logged(days: int = 7) -> None:
 
     def _print_entries(entries: list[dict]) -> None:
         for entry in entries:
-            print(f"[{entry['score']}/10] {entry['timestamp'][:10]}  {entry['title'][:70]}")
+            print(
+                f"[{entry['score']}/10] {entry['timestamp'][:10]}  {entry['title'][:70]}"
+            )
             print(f"  {entry.get('rationale', '')}")
             print()
 
@@ -256,7 +266,9 @@ def cmd_review_logged(days: int = 7) -> None:
         return
 
     if flagged:
-        print(f"--- NOSTETTU ({len(flagged)} kpl, pistemäärä ≥{config.NOTIFY_THRESHOLD}) ---\n")
+        print(
+            f"--- NOSTETTU ({len(flagged)} kpl, pistemäärä ≥{config.NOTIFY_THRESHOLD}) ---\n"
+        )
         _print_entries(flagged)
 
     if borderline:
@@ -311,8 +323,12 @@ def cmd_preview_nostetut() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seurantabotti — Kuluttajaliitto monitoring tool")
-    parser.add_argument("--daily", action="store_true", help="Run daily lausuntopalvelu check")
+    parser = argparse.ArgumentParser(
+        description="Seurantabotti — Kuluttajaliitto monitoring tool"
+    )
+    parser.add_argument(
+        "--daily", action="store_true", help="Run daily lausuntopalvelu check"
+    )
     parser.add_argument(
         "--weekly", action="store_true", help="Run weekly committee digest (Fridays)"
     )
