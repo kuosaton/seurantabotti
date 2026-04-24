@@ -249,3 +249,19 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
     assert called["midweek"] == 1
     assert called["review_logged"] == 3
     assert called["preview"] == 1
+
+
+def test_main_dispatches_reset_state_flag(monkeypatch) -> None:
+    called = {"reset": False}
+
+    monkeypatch.setattr(main, "cmd_update_context", lambda: None)
+    monkeypatch.setattr(main, "cmd_daily", lambda dry_run: None)
+    monkeypatch.setattr(main, "cmd_weekly", lambda dry_run: None)
+    monkeypatch.setattr(main, "cmd_midweek", lambda dry_run: None)
+    monkeypatch.setattr(main, "cmd_review_logged", lambda days: None)
+    monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: None)
+    monkeypatch.setattr(main, "cmd_reset_state", lambda: called.__setitem__("reset", True))
+    monkeypatch.setattr("sys.argv", ["main.py", "--reset-state"])
+
+    main.main()
+    assert called["reset"] is True

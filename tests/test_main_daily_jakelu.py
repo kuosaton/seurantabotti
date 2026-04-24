@@ -8,7 +8,7 @@ import main
 from clients.lausuntopalvelu import Proposal
 
 
-def test_cmd_daily_applies_jakelu_boost_and_persists_flag(tmp_path, monkeypatch) -> None:
+def test_cmd_daily_skips_when_kuluttajaliitto_already_on_jakelu(tmp_path, monkeypatch) -> None:
     state_dir = tmp_path / "state"
     context_dir = tmp_path / "context"
     state_dir.mkdir()
@@ -46,34 +46,32 @@ def test_cmd_daily_applies_jakelu_boost_and_persists_flag(tmp_path, monkeypatch)
     )
 
     monkeypatch.setattr(main, "fetch_recent", lambda client, top: [proposal])
-    monkeypatch.setattr(main, "proposal_has_recipient", lambda client, pid, name: True)
 
-    captured_signals: dict = {}
+    captured_lookup = {}
 
-    def fake_score_item(title, abstract, source, context, signals=None):
-        captured_signals.update(signals or {})
-        return {"score": 6, "rationale": "Perustelu", "themes": ["kuluttajansuoja"]}
+    def fake_has_recipient(client, pid, name):
+        captured_lookup["pid"] = pid
+        captured_lookup["name"] = name
+        return True
 
-    monkeypatch.setattr(main, "score_item", fake_score_item)
+    monkeypatch.setattr(main, "proposal_has_recipient", fake_has_recipient)
+
+    def should_not_score(*args, **kwargs):
+        raise AssertionError("score_item should not run for Jakelu-skipped proposals")
+
+    monkeypatch.setattr(main, "score_item", should_not_score)
 
     main.cmd_daily(dry_run=True)
 
-    assert captured_signals == {"jakelu_kuluttajaliitto": True}
+    assert captured_lookup == {"pid": proposal.id, "name": "Kuluttajaliit"}
 
     seen = json.loads(seen_path.read_text(encoding="utf-8"))
-    assert seen[proposal.id]["score"] == 7
-    assert seen[proposal.id]["notified"] is False
+    assert seen == {}
 
     log_lines = [
         line for line in score_log_path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
-    assert len(log_lines) == 1
-    log_entry = json.loads(log_lines[0])
-    assert log_entry["score"] == 7
-    assert log_entry["jakelu_kuluttajaliitto"] is True
+    assert len(log_lines) == 0
 
     nostetut = json.loads(nostetut_path.read_text(encoding="utf-8"))
-    assert len(nostetut) == 1
-    assert nostetut[0]["score"] == 7
-    assert nostetut[0]["jakelu_kuluttajaliitto"] is True
-    assert "Kuluttajaliitto ry" in nostetut[0]["rationale"]
+    assert nostetut == []

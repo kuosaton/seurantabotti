@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import json
+import re
 
 import anthropic
 
@@ -57,6 +58,42 @@ def _format_statements(statements: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _parse_response_json(raw_text: str) -> dict:
+    text = raw_text.strip()
+    candidates: list[str] = [text] if text else []
+
+    # Accept fenced JSON outputs like ```json {...}```.
+    for m in re.finditer(r"```(?:json)?\s*(.*?)\s*```", text, flags=re.IGNORECASE | re.DOTALL):
+        fenced = m.group(1).strip()
+        if fenced:
+            candidates.append(fenced)
+
+    # Fallback: take the first balanced JSON object from surrounding prose.
+    start = text.find("{")
+    if start != -1:
+        depth = 0
+        for idx in range(start, len(text)):
+            ch = text[idx]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    candidates.append(text[start : idx + 1])
+                    break
+
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+
+    preview = text[:180].replace("\n", "\\n")
+    raise ValueError(f"Model response was not valid JSON object: {preview!r}")
+
+
 def score_item(
     title: str,
     abstract: str,
@@ -73,20 +110,14 @@ def score_item(
     identical across all calls in one run, so subsequent calls hit the cache.
     """
     context_text = _format_statements(context.get("recent_statements", []))
-    signal_text = ""
-    if signals and signals.get("jakelu_kuluttajaliitto"):
-        signal_text = "\n**Lisäsignaali:** Jakelu-listassa on Kuluttajaliitto ry."
     item_text = (
-        f"## Arvioitava asia\n\n"
-        f"**Lähde:** {source}\n"
-        f"**Otsikko:** {title}\n"
-        f"**Kuvaus:** {abstract}"
-        f"{signal_text}"
+        f"## Arvioitava asia\n\n**Lähde:** {source}\n**Otsikko:** {title}\n**Kuvaus:** {abstract}"
     )
 
     response = _get_client().messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-haiku-4-5",
         max_tokens=300,
+        timeout=45.0,
         system=[
             {
                 "type": "text",
@@ -112,4 +143,14 @@ def score_item(
         ],
     )
 
-    return json.loads(response.content[0].text)
+    text_parts: list[str] = []
+    for block in response.content:
+        block_type = getattr(block, "type", None)
+        text = getattr(block, "text", None)
+        if block_type in (None, "text") and isinstance(text, str) and text.strip():
+            text_parts.append(text)
+
+    if not text_parts:
+        raise ValueError("Anthropic response did not contain a non-empty text payload")
+
+    return _parse_response_json("\n".join(text_parts))

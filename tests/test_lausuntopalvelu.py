@@ -56,3 +56,24 @@ def test_proposal_has_recipient_false_when_not_found() -> None:
     client.get.return_value = response
 
     assert proposal_has_recipient(client, "abc", "Kuluttajaliitto ry") is False
+
+
+def test_proposal_has_recipient_matches_kuluttajaliitto_typo_with_prefix_lookup() -> None:
+    html = """
+    <html><body>
+      <h5>Jakelu:</h5>
+      <div>
+        <table>
+          <tr><td>kuluttajaliito - Konsumentforbundet ry</td></tr>
+        </table>
+      </div>
+    </body></html>
+    """
+    response = Mock()
+    response.text = html
+    response.raise_for_status.return_value = None
+
+    client = Mock()
+    client.get.return_value = response
+
+    assert proposal_has_recipient(client, "abc", "Kuluttajaliit") is True

@@ -4,8 +4,8 @@ import argparse
 import json
 import os
 import sys
+from datetime import UTC, datetime
 from datetime import date as date_type
-from datetime import datetime, UTC
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -85,30 +85,23 @@ def cmd_update_context() -> None:
 def _score_proposal(client: httpx.Client, proposal: Proposal, ctx: dict) -> dict | None:
     in_jakelu = False
     try:
-        in_jakelu = proposal_has_recipient(client, proposal.id, "Kuluttajaliitto ry")
+        # Match the organization name robustly, including minor typos like
+        # "kuluttajaliito" and bilingual variants.
+        in_jakelu = proposal_has_recipient(client, proposal.id, "Kuluttajaliit")
     except httpx.HTTPError as exc:
         print(f"  [WARN] could not read Jakelu for {proposal.id}: {exc}", file=sys.stderr)
 
+    if in_jakelu:
+        print(f"  [SKIP JAKELU] {proposal.title[:70]}")
+        return None
+
     try:
-        result = score_item(
-            proposal.title,
-            proposal.abstract,
-            "lausuntopalvelu",
-            ctx,
-            signals={"jakelu_kuluttajaliitto": in_jakelu},
-        )
+        result = score_item(proposal.title, proposal.abstract, "lausuntopalvelu", ctx)
     except Exception as exc:  # pylint: disable=broad-exception-caught
         print(f"  [ERROR] scoring failed for {proposal.id}: {exc}", file=sys.stderr)
         return None
 
-    if in_jakelu and result["score"] < 10:
-        result["score"] += 1
-        base = (result.get("rationale") or "").strip()
-        result["rationale"] = (
-            f"{base} Jakelulistalla on Kuluttajaliitto ry, mikä nostaa relevanssia.".strip()
-        )
-
-    result["jakelu_kuluttajaliitto"] = in_jakelu
+    result["jakelu_kuluttajaliitto"] = False
     return result
 
 
