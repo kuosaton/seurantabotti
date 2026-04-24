@@ -162,7 +162,7 @@ def test_cmd_update_context_fetches_and_saves(monkeypatch) -> None:
     monkeypatch.setattr(main.httpx, "Client", FakeClient)
 
     def fake_fetch_statements(client, per_page):
-        assert per_page == 20
+        assert per_page == 100
         return [
             Statement(
                 id=1,

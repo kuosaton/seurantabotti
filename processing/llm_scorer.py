@@ -53,8 +53,10 @@ def _format_statements(statements: list[dict]) -> str:
     lines = []
     for s in statements:
         lines.append(f"- {s['date']}: {s['title']}")
+        if s.get("tags"):
+            lines.append(f"  Teemat: {', '.join(s['tags'])}")
         if s.get("excerpt"):
-            lines.append(f"  {s['excerpt'][:200]}")
+            lines.append(f"  {s['excerpt'][:450]}")
     return "\n".join(lines)
 
 
@@ -73,7 +75,7 @@ def score_item(
     The system prompt and context block are marked for prompt caching — they stay
     identical across all calls in one run, so subsequent calls hit the cache.
     """
-    context_text = _format_statements(context.get("recent_statements", [])[:15])
+    context_text = _format_statements(context.get("recent_statements", []))
     signal_text = ""
     if signals and signals.get("jakelu_kuluttajaliitto"):
         signal_text = "\n**Lisäsignaali:** Jakelu-listassa on Kuluttajaliitto ry."

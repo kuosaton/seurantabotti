@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from html import unescape
 
 import httpx
 
 WP_API = "https://www.kuluttajaliitto.fi/wp-json/wp/v2/posts"
-LAUSUNTO_TAG_ID = 3606  # tag "lausunto", 199 posts as of 2026-04-22
+WP_TAGS_API = "https://www.kuluttajaliitto.fi/wp-json/wp/v2/tags"
 
 
 @dataclass
@@ -18,6 +18,7 @@ class Statement:
     title: str
     excerpt: str
     url: str
+    tags: list[str] = field(default_factory=list)
 
 
 def _strip(s: str | None) -> str:
@@ -26,20 +27,40 @@ def _strip(s: str | None) -> str:
     return unescape(re.sub(r"<[^>]+>", " ", s)).strip()
 
 
-def fetch_statements(client: httpx.Client, per_page: int = 15) -> list[Statement]:
-    """Fetch the most recent lausunto posts from the WordPress REST API."""
+def _fetch_tag_names(client: httpx.Client, tag_ids: list[int]) -> dict[int, str]:
+    if not tag_ids:
+        return {}
     r = client.get(
-        WP_API,
+        WP_TAGS_API,
         params={
-            "tags": LAUSUNTO_TAG_ID,
-            "per_page": per_page,
-            "orderby": "date",
-            "order": "desc",
-            "_fields": "id,date,title,link,excerpt",
+            "include": ",".join(str(i) for i in tag_ids),
+            "per_page": 100,
+            "_fields": "id,name",
         },
         timeout=20,
     )
     r.raise_for_status()
+    return {t["id"]: t["name"] for t in r.json()}
+
+
+def fetch_statements(client: httpx.Client, per_page: int = 100) -> list[Statement]:
+    r = client.get(
+        WP_API,
+        params={
+            "artikkelin_tyyppi": 8,
+            "per_page": per_page,
+            "orderby": "date",
+            "order": "desc",
+            "_fields": "id,date,title,link,excerpt,tags",
+        },
+        timeout=20,
+    )
+    r.raise_for_status()
+    raw = r.json()
+
+    all_tag_ids = list({tag_id for post in raw for tag_id in post.get("tags", [])})
+    tag_names = _fetch_tag_names(client, all_tag_ids)
+
     return [
         Statement(
             id=p["id"],
@@ -47,8 +68,9 @@ def fetch_statements(client: httpx.Client, per_page: int = 15) -> list[Statement
             title=_strip(p["title"]["rendered"]),
             excerpt=_strip(p.get("excerpt", {}).get("rendered", "")),
             url=p["link"],
+            tags=[tag_names[t] for t in p.get("tags", []) if t in tag_names],
         )
-        for p in r.json()
+        for p in raw
     ]
 
 
@@ -61,6 +83,7 @@ def build_context(statements: list[Statement]) -> dict:
                 "date": s.date,
                 "url": s.url,
                 "excerpt": s.excerpt,
+                "tags": s.tags,
             }
             for s in statements
         ],

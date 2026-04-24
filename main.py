@@ -77,7 +77,7 @@ def _save_context(ctx: dict) -> None:
 def cmd_update_context() -> None:
     print("Fetching Kuluttajaliitto lausunnot...", flush=True)
     with httpx.Client() as client:
-        statements = fetch_statements(client, per_page=20)
+        statements = fetch_statements(client, per_page=100)
     ctx = build_context(statements)
     _save_context(ctx)
     print(f"Saved {len(statements)} statements to {config.CONTEXT_PATH}")
