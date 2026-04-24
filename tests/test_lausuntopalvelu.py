@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from clients.lausuntopalvelu import proposal_has_recipient
+from clients.lausuntopalvelu import get_participation_flags, proposal_has_recipient
 
 
 def test_proposal_has_recipient_from_jakelu_table() -> None:
@@ -77,3 +77,49 @@ def test_proposal_has_recipient_matches_kuluttajaliitto_typo_with_prefix_lookup(
     client.get.return_value = response
 
     assert proposal_has_recipient(client, "abc", "Kuluttajaliit") is True
+
+
+def test_get_participation_flags_detects_responded() -> None:
+    html = """
+    <html><body>
+      <h5>Jakelu:</h5>
+      <div><table class="answered-participant">
+        <tr><td>Akava ry</td></tr>
+      </table></div>
+      <script>
+        "UsersWhoAnswered":[{"DisplayName":"Kuluttajaliitto ry","Organization":"Kuluttajaliitto ry"}]
+      </script>
+    </body></html>
+    """
+    response = Mock()
+    response.text = html
+    response.raise_for_status.return_value = None
+    client = Mock()
+    client.get.return_value = response
+
+    in_jakelu, has_responded = get_participation_flags(client, "abc", "Kuluttajaliit")
+    assert in_jakelu is False
+    assert has_responded is True
+
+
+def test_get_participation_flags_both_false_when_absent() -> None:
+    response = Mock()
+    response.text = '<html><body>"UsersWhoAnswered":[]</body></html>'
+    response.raise_for_status.return_value = None
+    client = Mock()
+    client.get.return_value = response
+
+    in_jakelu, has_responded = get_participation_flags(client, "abc", "Kuluttajaliit")
+    assert in_jakelu is False
+    assert has_responded is False
+
+
+def test_get_participation_flags_single_fetch() -> None:
+    response = Mock()
+    response.text = '<html><body>"UsersWhoAnswered":[]</body></html>'
+    response.raise_for_status.return_value = None
+    client = Mock()
+    client.get.return_value = response
+
+    get_participation_flags(client, "xyz", "Kuluttajaliit")
+    assert client.get.call_count == 1

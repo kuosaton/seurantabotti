@@ -102,6 +102,39 @@ def test_build_daily_digest_sorts_by_score_descending() -> None:
     assert pos_korkea < pos_keski < pos_matala
 
 
+def test_build_daily_digest_sorts_by_deadline_within_same_score() -> None:
+    def _proposal(title: str, deadline: datetime) -> SimpleNamespace:
+        return SimpleNamespace(
+            title=title,
+            organization_name="Org",
+            published_on=datetime(2026, 4, 1),
+            deadline=deadline,
+            url="https://example.invalid/p/1",
+        )
+
+    flagged = [
+        {
+            "proposal": _proposal("Kiireeton", datetime(2026, 6, 30)),
+            "score": 7,
+            "rationale": "R",
+            "themes": [],
+        },
+        {
+            "proposal": _proposal("Kiireinen", datetime(2026, 5, 2)),
+            "score": 7,
+            "rationale": "R",
+            "themes": [],
+        },
+        {"proposal": _proposal("EiDeadlinea", None), "score": 7, "rationale": "R", "themes": []},
+    ]
+
+    _, _, text_body = email_mod.build_daily_digest(flagged)
+    pos_kiireinen = text_body.index("Kiireinen")
+    pos_kiireeton = text_body.index("Kiireeton")
+    pos_ei = text_body.index("EiDeadlinea")
+    assert pos_kiireinen < pos_kiireeton < pos_ei
+
+
 def test_build_daily_digest_deadline_today() -> None:
     proposal = SimpleNamespace(
         title="T",

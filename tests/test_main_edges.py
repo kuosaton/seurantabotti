@@ -80,7 +80,7 @@ def test_cmd_daily_warns_if_jakelu_fetch_fails_and_drops_low_score(
     def _raise_jakelu(*args, **kwargs):
         raise main.httpx.HTTPError("jakelu unavailable")
 
-    monkeypatch.setattr(main, "proposal_has_recipient", _raise_jakelu)
+    monkeypatch.setattr(main, "get_participation_flags", _raise_jakelu)
     monkeypatch.setattr(
         main,
         "score_item",
@@ -89,7 +89,7 @@ def test_cmd_daily_warns_if_jakelu_fetch_fails_and_drops_low_score(
 
     main.cmd_daily(dry_run=True)
     captured = capsys.readouterr()
-    assert "[WARN] could not read Jakelu" in captured.err
+    assert "[WARN] could not read participation info" in captured.err
     assert "[DROP 2/10]" in captured.out
     assert score_log_path.read_text(encoding="utf-8").strip() != ""
 

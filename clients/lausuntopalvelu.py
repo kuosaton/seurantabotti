@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -79,36 +80,55 @@ def fetch_recent(client: httpx.Client, top: int = 50) -> list[Proposal]:
     return [_parse_entry(e) for e in root.findall("atom:entry", NS)]
 
 
-def proposal_has_recipient(
-    client: httpx.Client,
-    proposal_id: str,
-    recipient_name: str,
-) -> bool:
-    """
-    Return True when the proposal participation page's Jakelu table contains
-    `recipient_name`.
-
-    This uses the public Participation page because the OData API does not expose
-    organization names for proposal participants.
-    """
-    url = PROPOSAL_URL.format(id=proposal_id)
-    r = client.get(url, timeout=20)
-    r.raise_for_status()
-    html = r.text
-
-    # Prefer the explicit Jakelu table when available.
+def _check_jakelu(html: str, name: str) -> bool:
     m = re.search(
         r"<h5>\s*Jakelu:\s*</h5>\s*<div[^>]*>\s*<table[^>]*>(?P<table>.*?)</table>",
         html,
         flags=re.IGNORECASE | re.DOTALL,
     )
     if m:
-        return recipient_name.casefold() in strip_html(m.group("table")).casefold()
-
-    # Fallback: scan only the Jakelu accordion region to avoid false positives.
+        return name.casefold() in strip_html(m.group("table")).casefold()
     marker = "listOfRespondentsSettingsBody"
     idx = html.find(marker)
     if idx == -1:
         return False
     section = html[idx : idx + 50000]
-    return recipient_name.casefold() in strip_html(section).casefold()
+    return name.casefold() in strip_html(section).casefold()
+
+
+def _check_responded(html: str, name: str) -> bool:
+    m = re.search(r'"UsersWhoAnswered":(\[.*?\])', html, re.DOTALL)
+    if not m:
+        return False
+    try:
+        users = json.loads(m.group(1))
+    except json.JSONDecodeError:
+        return False
+    name_lower = name.casefold()
+    return any(
+        name_lower in (u.get("DisplayName") or "").casefold()
+        or name_lower in (u.get("Organization") or "").casefold()
+        for u in users
+    )
+
+
+def get_participation_flags(
+    client: httpx.Client,
+    proposal_id: str,
+    org_name: str,
+) -> tuple[bool, bool]:
+    """Fetch the participation page once and return (in_jakelu, has_responded)."""
+    url = PROPOSAL_URL.format(id=proposal_id)
+    r = client.get(url, timeout=20)
+    r.raise_for_status()
+    html = r.text
+    return _check_jakelu(html, org_name), _check_responded(html, org_name)
+
+
+def proposal_has_recipient(
+    client: httpx.Client,
+    proposal_id: str,
+    recipient_name: str,
+) -> bool:
+    in_jakelu, _ = get_participation_flags(client, proposal_id, recipient_name)
+    return in_jakelu

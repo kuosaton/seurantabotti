@@ -71,7 +71,10 @@ def send_email(subject: str, html_body: str, text_body: str) -> None:
 
 def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
     today = _fmt_date(date.today())
-    sorted_items = sorted(flagged, key=lambda x: x["score"], reverse=True)
+    sorted_items = sorted(
+        flagged,
+        key=lambda x: (-x["score"], x["proposal"].deadline or datetime.max),
+    )
     count = len(sorted_items)
     subject = f"Uusia lausuntopyyntöjä, {today}"
 

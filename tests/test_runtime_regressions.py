@@ -77,13 +77,13 @@ def test_cmd_daily_uses_open_client_for_recipient_lookup(tmp_path, monkeypatch) 
 
     seen_lookup_state = {"checked": False}
 
-    def fake_proposal_has_recipient(client, pid, name):
+    def fake_get_participation_flags(client, pid, name):
         assert client.closed is False
         seen_lookup_state["checked"] = True
-        return False
+        return False, False
 
     monkeypatch.setattr(main, "fetch_recent", fake_fetch_recent)
-    monkeypatch.setattr(main, "proposal_has_recipient", fake_proposal_has_recipient)
+    monkeypatch.setattr(main, "get_participation_flags", fake_get_participation_flags)
     monkeypatch.setattr(
         main,
         "score_item",

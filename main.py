@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 import config
 from clients.kuluttajaliitto import build_context, fetch_statements
-from clients.lausuntopalvelu import Proposal, fetch_recent, proposal_has_recipient
+from clients.lausuntopalvelu import Proposal, fetch_recent, get_participation_flags
 from delivery.email import build_daily_digest, send_email
 from processing.llm_scorer import score_item
 
@@ -84,16 +84,22 @@ def cmd_update_context() -> None:
 
 def _score_proposal(client: httpx.Client, proposal: Proposal, ctx: dict) -> dict | None:
     in_jakelu = False
+    has_responded = False
     try:
-        # Match the organization name robustly, including minor typos like
-        # "kuluttajaliito" and bilingual variants.
-        in_jakelu = proposal_has_recipient(client, proposal.id, "Kuluttajaliit")
+        in_jakelu, has_responded = get_participation_flags(client, proposal.id, "Kuluttajaliit")
     except httpx.HTTPError as exc:
-        print(f"  [WARN] could not read Jakelu for {proposal.id}: {exc}", file=sys.stderr)
+        print(
+            f"  [WARN] could not read participation info for {proposal.id}: {exc}",
+            file=sys.stderr,
+        )
 
     if in_jakelu:
         print(f"  [SKIP JAKELU] {proposal.title}")
         return {"_skip_reason": "jakelu", "jakelu_kuluttajaliitto": True}
+
+    if has_responded:
+        print(f"  [SKIP RESPONDED] {proposal.title}")
+        return {"_skip_reason": "already_responded", "jakelu_kuluttajaliitto": False}
 
     try:
         result = score_item(proposal.title, proposal.abstract, "lausuntopalvelu", ctx)
@@ -185,7 +191,8 @@ def cmd_daily(dry_run: bool) -> None:
             if result is None:
                 continue
 
-            if result.get("_skip_reason") == "jakelu":
+            skip_reason = result.get("_skip_reason")
+            if skip_reason in ("jakelu", "already_responded"):
                 now = datetime.now(UTC).isoformat()
                 seen[p.id] = {
                     "first_seen": now,
@@ -193,7 +200,7 @@ def cmd_daily(dry_run: bool) -> None:
                     "score": 0,
                     "notified": False,
                     "notified_at": None,
-                    "status": "skipped_jakelu",
+                    "status": f"skipped_{skip_reason}",
                     "published_on": p.published_on.isoformat(),
                 }
                 continue

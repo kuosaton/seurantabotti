@@ -85,7 +85,7 @@ def test_cmd_daily_borderline_item_is_logged_only(tmp_path, monkeypatch) -> None
     )
 
     monkeypatch.setattr(main, "fetch_recent", lambda client, top: [proposal])
-    monkeypatch.setattr(main, "proposal_has_recipient", lambda client, pid, name: False)
+    monkeypatch.setattr(main, "get_participation_flags", lambda client, pid, name: (False, False))
     monkeypatch.setattr(
         main,
         "score_item",
@@ -199,7 +199,7 @@ def test_cmd_daily_handles_scoring_exception(tmp_path, monkeypatch) -> None:
         url="https://example.invalid/p/score-fail",
     )
     monkeypatch.setattr(main, "fetch_recent", lambda client, top: [proposal])
-    monkeypatch.setattr(main, "proposal_has_recipient", lambda client, pid, name: False)
+    monkeypatch.setattr(main, "get_participation_flags", lambda client, pid, name: (False, False))
 
     def _raise_score(*args, **kwargs):
         raise RuntimeError("scoring down")
@@ -230,7 +230,7 @@ def test_cmd_daily_non_dry_run_sends_email(tmp_path, monkeypatch) -> None:
     )
 
     monkeypatch.setattr(main, "fetch_recent", lambda client, top: [proposal])
-    monkeypatch.setattr(main, "proposal_has_recipient", lambda client, pid, name: False)
+    monkeypatch.setattr(main, "get_participation_flags", lambda client, pid, name: (False, False))
     monkeypatch.setattr(
         main,
         "score_item",
@@ -300,7 +300,7 @@ def test_cmd_daily_dry_run_prints_digest_but_does_not_send(tmp_path, monkeypatch
     )
 
     monkeypatch.setattr(main, "fetch_recent", lambda client, top: [proposal])
-    monkeypatch.setattr(main, "proposal_has_recipient", lambda client, pid, name: False)
+    monkeypatch.setattr(main, "get_participation_flags", lambda client, pid, name: (False, False))
     monkeypatch.setattr(
         main,
         "score_item",
