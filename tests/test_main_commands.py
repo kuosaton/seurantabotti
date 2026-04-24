@@ -365,6 +365,99 @@ def test_cmd_review_logged_prints_only_borderline_section(tmp_path, monkeypatch,
     assert "LOKITETTU" in out
 
 
+def test_cmd_preview_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    score_log_path.unlink()
+
+    main.cmd_preview_logged(days=7)
+    out = capsys.readouterr().out
+    assert "No score log found." in out
+
+
+def test_cmd_preview_logged_empty_result(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    now = datetime.now(main.UTC).isoformat()
+    # Only items above NOTIFY_THRESHOLD — none in borderline range
+    score_log_path.write_text(
+        json.dumps({"timestamp": now, "title": "Nostettava", "score": 8, "rationale": "R"}) + "\n",
+        encoding="utf-8",
+    )
+
+    main.cmd_preview_logged(days=7)
+    out = capsys.readouterr().out
+    assert "No borderline items" in out
+
+
+def test_cmd_preview_logged_renders_borderline_items(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    now = datetime.now(main.UTC)
+    entries = [
+        {
+            "timestamp": now.isoformat(),
+            "title": "Rajatapaus",
+            "score": 5,
+            "rationale": "Ehka kiinnostava",
+            "themes": ["kuluttaja"],
+            "published_on": now.isoformat(),
+        },
+        {
+            "timestamp": (now - timedelta(days=10)).isoformat(),
+            "title": "Vanha rajatapaus",
+            "score": 4,
+            "rationale": "Vanhentunut",
+            "themes": [],
+            "published_on": now.isoformat(),
+        },
+    ]
+    score_log_path.write_text(
+        "\n".join(json.dumps(e, ensure_ascii=False) for e in entries) + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        main,
+        "build_daily_digest",
+        lambda items: ("SUBJ", "HTML", f"ITEMS:{len(items)}"),
+    )
+
+    main.cmd_preview_logged(days=7)
+    out = capsys.readouterr().out
+    assert "Subject: SUBJ" in out
+    assert "ITEMS:1" in out  # only the recent entry, not the 10-day-old one
+
+
+def test_cmd_preview_logged_filters_above_notify_threshold(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    now = datetime.now(main.UTC).isoformat()
+    entries = [
+        {"timestamp": now, "title": "Nostettu", "score": 7, "rationale": "R", "themes": []},
+        {"timestamp": now, "title": "Rajalla", "score": 5, "rationale": "R", "themes": []},
+        {"timestamp": now, "title": "Liian alhainen", "score": 2, "rationale": "R", "themes": []},
+    ]
+    score_log_path.write_text(
+        "\n".join(json.dumps(e, ensure_ascii=False) for e in entries) + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        main,
+        "build_daily_digest",
+        lambda items: ("S", "H", f"COUNT:{len(items)}"),
+    )
+
+    main.cmd_preview_logged(days=7)
+    out = capsys.readouterr().out
+    assert "COUNT:1" in out  # only the borderline item (score 5)
+
+
 def test_cmd_reset_state_clears_files(tmp_path, monkeypatch, capsys) -> None:
     seen_path, score_log_path, nostetut_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch

@@ -338,6 +338,63 @@ def cmd_preview_nostetut() -> None:
     print(text_body)
 
 
+def cmd_preview_logged(days: int = 7) -> None:
+    if not config.SCORE_LOG_PATH.exists():
+        print("No score log found.")
+        return
+
+    cutoff = datetime.now(UTC).timestamp() - days * 86400
+    borderline = []
+
+    with config.SCORE_LOG_PATH.open(encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                entry = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            score = entry.get("score", 0)
+            ts = datetime.fromisoformat(entry["timestamp"].rstrip("Z")).replace(tzinfo=UTC)
+            if ts.timestamp() < cutoff:
+                continue
+            if config.LOG_THRESHOLD <= score < config.NOTIFY_THRESHOLD:
+                borderline.append(entry)
+
+    if not borderline:
+        print(f"No borderline items in the last {days} days.")
+        return
+
+    items = []
+    for e in borderline:
+        published_on = None
+        if e.get("published_on"):
+            try:
+                published_on = datetime.fromisoformat(e["published_on"])
+            except ValueError:
+                pass
+        proposal = SimpleNamespace(
+            title=e.get("title", ""),
+            organization_name="–",
+            deadline=None,
+            published_on=published_on,
+            url="",
+        )
+        items.append(
+            {
+                "proposal": proposal,
+                "score": e.get("score", 0),
+                "rationale": e.get("rationale", ""),
+                "themes": e.get("themes", []),
+            }
+        )
+
+    subject, _html_body, text_body = build_daily_digest(items)
+    print(f"Subject: {subject}\n")
+    print(text_body)
+
+
 def cmd_reset_state() -> None:
     print("This will erase all state: seen proposals, score log, and nostetut.")
     answer = input("Continue? [y/N] ").strip().lower()
@@ -364,12 +421,39 @@ Seurantabotti
 4  Review logged items (7 days)
 5  Review logged items (custom range)
 6  Preview nostetut
-7  Reset state
+7  Preview logged (borderline)
+8  Reset state
 0  Exit
 ─────────────────────────────────────"""
 
 
+def _menu_review_custom() -> None:
+    raw = input("Days to look back: ").strip()
+    try:
+        cmd_review_logged(days=int(raw))
+    except ValueError:
+        print(f"Invalid number: {raw!r}")
+
+
+def _menu_preview_logged() -> None:
+    raw = input("Days to look back (default 7): ").strip()
+    try:
+        cmd_preview_logged(days=int(raw) if raw else 7)
+    except ValueError:
+        print(f"Invalid number: {raw!r}")
+
+
 def cmd_interactive() -> None:
+    actions: dict[str, object] = {
+        "1": lambda: cmd_daily(dry_run=False),
+        "2": lambda: cmd_daily(dry_run=True),
+        "3": cmd_update_context,
+        "4": lambda: cmd_review_logged(days=7),
+        "5": _menu_review_custom,
+        "6": cmd_preview_nostetut,
+        "7": _menu_preview_logged,
+        "8": cmd_reset_state,
+    }
     print(_MENU)
     while True:
         try:
@@ -380,28 +464,11 @@ def cmd_interactive() -> None:
 
         if choice == "0":
             break
-        elif choice == "1":
-            cmd_daily(dry_run=False)
-        elif choice == "2":
-            cmd_daily(dry_run=True)
-        elif choice == "3":
-            cmd_update_context()
-        elif choice == "4":
-            cmd_review_logged(days=7)
-        elif choice == "5":
-            raw = input("Days to look back: ").strip()
-            try:
-                cmd_review_logged(days=int(raw))
-            except ValueError:
-                print(f"Invalid number: {raw!r}")
-        elif choice == "6":
-            cmd_preview_nostetut()
-        elif choice == "7":
-            cmd_reset_state()
-        else:
+        action = actions.get(choice)
+        if action is None:
             print(f"Unknown option: {choice!r}")
             continue
-
+        action()  # type: ignore[operator]
         print(_MENU)
 
 
@@ -446,6 +513,11 @@ def main() -> None:
         help="Preview nostetut.json as a formatted email digest",
     )
     parser.add_argument(
+        "--preview-logged",
+        action="store_true",
+        help="Preview borderline items from the score log as a formatted digest",
+    )
+    parser.add_argument(
         "--reset-state",
         action="store_true",
         help="Erase all state files and start fresh",
@@ -465,6 +537,7 @@ def main() -> None:
             args.update_context,
             args.review_logged,
             args.preview_nostetut,
+            args.preview_logged,
             args.reset_state,
             args.interactive,
         ]
@@ -489,6 +562,9 @@ def main() -> None:
 
     if args.preview_nostetut:
         cmd_preview_nostetut()
+
+    if args.preview_logged:
+        cmd_preview_logged(days=args.days)
 
     if args.reset_state:
         cmd_reset_state()

@@ -14,6 +14,7 @@ def test_main_dispatches_preview(monkeypatch) -> None:
     monkeypatch.setattr(main, "cmd_midweek", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_update_context", lambda: None)
     monkeypatch.setattr(main, "cmd_review_logged", lambda days: None)
+    monkeypatch.setattr(main, "cmd_preview_logged", lambda days: None)
     monkeypatch.setattr(
         "sys.argv",
         ["main.py", "--preview-nostetut"],
@@ -21,6 +22,24 @@ def test_main_dispatches_preview(monkeypatch) -> None:
 
     main.main()
     assert called["preview"] is True
+
+
+def test_main_dispatches_preview_logged(monkeypatch) -> None:
+    called = {"preview_logged": False}
+
+    monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: None)
+    monkeypatch.setattr(main, "cmd_daily", lambda dry_run: None)
+    monkeypatch.setattr(main, "cmd_weekly", lambda dry_run: None)
+    monkeypatch.setattr(main, "cmd_midweek", lambda dry_run: None)
+    monkeypatch.setattr(main, "cmd_update_context", lambda: None)
+    monkeypatch.setattr(main, "cmd_review_logged", lambda days: None)
+    monkeypatch.setattr(
+        main, "cmd_preview_logged", lambda days: called.__setitem__("preview_logged", True)
+    )
+    monkeypatch.setattr("sys.argv", ["main.py", "--preview-logged"])
+
+    main.main()
+    assert called["preview_logged"] is True
 
 
 def test_main_without_flags_launches_interactive(monkeypatch) -> None:
@@ -150,14 +169,34 @@ def test_interactive_menu_choice_preview_nostetut(monkeypatch) -> None:
     assert called["preview"] is True
 
 
+def test_interactive_menu_choice_preview_logged(monkeypatch) -> None:
+    called = {"preview_logged": False}
+
+    def mock_preview_logged(days):
+        called["preview_logged"] = True
+
+    inputs = ["7", "7", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        return next(input_iter)
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr(main, "cmd_preview_logged", mock_preview_logged)
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    main.main()
+    assert called["preview_logged"] is True
+
+
 def test_interactive_menu_choice_reset_state(monkeypatch) -> None:
     called = {"reset": False}
 
     def mock_reset():
         called["reset"] = True
 
-    # Simulate choosing "7" (reset state) then "0" (exit)
-    inputs = ["7", "0"]
+    # Simulate choosing "8" (reset state) then "0" (exit)
+    inputs = ["8", "0"]
     input_iter = iter(inputs)
 
     def mock_input(prompt):
@@ -263,6 +302,7 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
         "midweek": 0,
         "review_logged": 0,
         "preview": 0,
+        "preview_logged": 0,
     }
 
     monkeypatch.setattr(main, "cmd_update_context", lambda: called.__setitem__("update_context", 1))
@@ -280,6 +320,9 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
     )
     monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: called.__setitem__("preview", 1))
     monkeypatch.setattr(
+        main, "cmd_preview_logged", lambda days: called.__setitem__("preview_logged", days)
+    )
+    monkeypatch.setattr(
         "sys.argv",
         [
             "main.py",
@@ -291,6 +334,7 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
             "--days",
             "3",
             "--preview-nostetut",
+            "--preview-logged",
             "--dry-run",
         ],
     )
@@ -303,6 +347,7 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
     assert called["midweek"] == 1
     assert called["review_logged"] == 3
     assert called["preview"] == 1
+    assert called["preview_logged"] == 3
 
 
 def test_main_dispatches_reset_state_flag(monkeypatch) -> None:
@@ -314,6 +359,7 @@ def test_main_dispatches_reset_state_flag(monkeypatch) -> None:
     monkeypatch.setattr(main, "cmd_midweek", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_review_logged", lambda days: None)
     monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: None)
+    monkeypatch.setattr(main, "cmd_preview_logged", lambda days: None)
     monkeypatch.setattr(main, "cmd_reset_state", lambda: called.__setitem__("reset", True))
     monkeypatch.setattr("sys.argv", ["main.py", "--reset-state"])
 
@@ -330,6 +376,7 @@ def test_main_dispatches_interactive_flag(monkeypatch) -> None:
     monkeypatch.setattr(main, "cmd_midweek", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_review_logged", lambda days: None)
     monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: None)
+    monkeypatch.setattr(main, "cmd_preview_logged", lambda days: None)
     monkeypatch.setattr(main, "cmd_reset_state", lambda: None)
     monkeypatch.setattr(
         main,

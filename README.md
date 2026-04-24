@@ -57,7 +57,8 @@ Seurantabotti
 4  Review logged items (7 days)
 5  Review logged items (custom range)
 6  Preview nostetut
-7  Reset state
+7  Preview logged (borderline)
+8  Reset state
 0  Exit
 ─────────────────────────────────────
 ```
@@ -80,6 +81,10 @@ uv run python main.py --review-logged --days 14
 
 # Preview nostetut.json formatted as an email digest (without sending)
 uv run python main.py --preview-nostetut
+
+# Preview borderline items from the score log as a formatted digest (without sending)
+uv run python main.py --preview-logged
+uv run python main.py --preview-logged --days 14
 
 # Erase all state files and start fresh
 uv run python main.py --reset-state
