@@ -107,6 +107,9 @@ def test_cmd_daily_borderline_item_is_logged_only(tmp_path, monkeypatch) -> None
     log_entry = json.loads(log_lines[0])
     assert log_entry["score"] == 5
     assert log_entry["notified"] is False
+    assert log_entry["organization"] == "Testi"
+    assert log_entry["url"] == "https://example.invalid/p/borderline-1"
+    assert log_entry["deadline"] is not None
 
 
 def test_cmd_review_logged_prints_flagged_and_borderline(tmp_path, monkeypatch, capsys) -> None:
@@ -405,6 +408,9 @@ def test_cmd_preview_logged_renders_borderline_items(tmp_path, monkeypatch, caps
             "rationale": "Ehka kiinnostava",
             "themes": ["kuluttaja"],
             "published_on": now.isoformat(),
+            "organization": "Testivirasto",
+            "deadline": "2026-05-01",
+            "url": "https://example.invalid/p/1",
         },
         {
             "timestamp": (now - timedelta(days=10)).isoformat(),
@@ -420,16 +426,20 @@ def test_cmd_preview_logged_renders_borderline_items(tmp_path, monkeypatch, caps
         encoding="utf-8",
     )
 
+    captured_items: list = []
     monkeypatch.setattr(
         main,
         "build_daily_digest",
-        lambda items: ("SUBJ", "HTML", f"ITEMS:{len(items)}"),
+        lambda items: captured_items.extend(items) or ("SUBJ", "HTML", f"ITEMS:{len(items)}"),
     )
 
     main.cmd_preview_logged(days=7)
     out = capsys.readouterr().out
     assert "Subject: SUBJ" in out
     assert "ITEMS:1" in out  # only the recent entry, not the 10-day-old one
+    assert captured_items[0]["proposal"].organization_name == "Testivirasto"
+    assert captured_items[0]["proposal"].url == "https://example.invalid/p/1"
+    assert captured_items[0]["proposal"].deadline is not None
 
 
 def test_cmd_preview_logged_filters_above_notify_threshold(tmp_path, monkeypatch, capsys) -> None:

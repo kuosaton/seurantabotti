@@ -127,6 +127,9 @@ def _record_result(p: Proposal, result: dict, notified: bool, seen: dict) -> Non
             "jakelu_kuluttajaliitto": result["jakelu_kuluttajaliitto"],
             "notified": notified,
             "published_on": p.published_on.isoformat(),
+            "deadline": p.deadline.date().isoformat() if p.deadline else None,
+            "organization": p.organization_name,
+            "url": p.url,
         }
     )
 
@@ -374,12 +377,19 @@ def cmd_preview_logged(days: int = 7) -> None:
                 published_on = datetime.fromisoformat(e["published_on"])
             except ValueError:
                 pass
+        deadline = None
+        if e.get("deadline"):
+            try:
+                d = date_type.fromisoformat(e["deadline"])
+                deadline = datetime(d.year, d.month, d.day)
+            except ValueError:
+                pass
         proposal = SimpleNamespace(
             title=e.get("title", ""),
-            organization_name="–",
-            deadline=None,
+            organization_name=e.get("organization") or "–",
+            deadline=deadline,
             published_on=published_on,
-            url="",
+            url=e.get("url", ""),
         )
         items.append(
             {

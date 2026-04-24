@@ -6,4 +6,3 @@
 - [] Support for valiokunta analysis (--weekly)
 - [] Better email preview formatting
 - [] Email support
-- [] check used llm model effort level

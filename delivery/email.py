@@ -16,6 +16,36 @@ def _fmt_date(d: date | datetime) -> str:
     return f"{d.day}.{d.month}.{d.year}"
 
 
+def _deadline_display(deadline: date | datetime | None) -> str:
+    if deadline is None:
+        return "–"
+    d = deadline.date() if isinstance(deadline, datetime) else deadline
+    days = (d - date.today()).days
+    date_str = _fmt_date(deadline)
+    if days > 0:
+        return f"{date_str} ({days} pv)"
+    if days == 0:
+        return f"{date_str} (tänään)"
+    return date_str
+
+
+def _deadline_html(deadline: date | datetime | None) -> str:
+    if deadline is None:
+        return "–"
+    d = deadline.date() if isinstance(deadline, datetime) else deadline
+    days = (d - date.today()).days
+    date_str = _fmt_date(deadline)
+    if days <= 0:
+        return date_str
+    if days <= 7:
+        style = "color:#c0392b;font-weight:bold;"
+    elif days <= 14:
+        style = "color:#e67e22;"
+    else:
+        style = "color:#888;"
+    return f'{date_str} <span style="{style}">({days} pv)</span>'
+
+
 def send_email(subject: str, html_body: str, text_body: str) -> None:
     to = os.environ.get("RECIPIENT_EMAIL", "")
     smtp_user = os.environ.get("SMTP_USER", "")
@@ -41,31 +71,37 @@ def send_email(subject: str, html_body: str, text_body: str) -> None:
 
 def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
     today = _fmt_date(date.today())
-    count = len(flagged)
+    sorted_items = sorted(flagged, key=lambda x: x["score"], reverse=True)
+    count = len(sorted_items)
     subject = f"Uusia lausuntopyyntöjä, {today}"
 
     lines = [f"{count} uutta lausuntopyyntöä, jotka saattavat kiinnostaa Kuluttajaliittoa:\n"]
-    for item in flagged:
+    for item in sorted_items:
         p = item["proposal"]
         published_str = _fmt_date(p.published_on) if getattr(p, "published_on", None) else "–"
-        deadline_str = _fmt_date(p.deadline) if p.deadline else "–"
-        lines += [
+        deadline_str = _deadline_display(p.deadline)
+        themes = item.get("themes", [])
+        entry = [
             f"▸ {p.title}",
             f"   Pyytäjä:   {p.organization_name}",
             f"   Julkaistu: {published_str}",
             f"   Määräaika: {deadline_str}",
             f"   Relevanssi: {item['score']}/10",
             f"   {item['rationale']}",
-            f"   {p.url}",
-            "",
         ]
+        if themes:
+            entry.append(f"   Teemat:    {', '.join(themes)}")
+        if p.url:
+            entry.append(f"   {p.url}")
+        entry.append("")
+        lines += entry
     text_body = "\n".join(lines)
 
     item_html = ""
-    for item in flagged:
+    for item in sorted_items:
         p = item["proposal"]
         published_str = _fmt_date(p.published_on) if getattr(p, "published_on", None) else "–"
-        deadline_str = _fmt_date(p.deadline) if p.deadline else "–"
+        deadline_str = _deadline_html(p.deadline)
         themes = ", ".join(item.get("themes", []))
         item_html += f"""
         <div style="margin-bottom:24px;padding:16px;border-left:4px solid #1a56a0;background:#f8f9fa;">

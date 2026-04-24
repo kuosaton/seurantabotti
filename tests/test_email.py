@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from types import SimpleNamespace
 
 import delivery.email as email_mod
@@ -69,8 +69,64 @@ def test_build_daily_digest_contains_key_fields() -> None:
     assert "Julkaistu: 21.4.2026" in text_body
     assert "Relevanssi: 8/10" in text_body
     assert "https://example.invalid/proposal/1" in text_body
+    assert "8.5.2026" in text_body
+    assert "pv" in text_body  # days-remaining annotation present
+    assert "Teemat:    asuminen, kuluttajansuoja" in text_body
     assert "Julkaistu" in html_body
     assert "Teemat: asuminen, kuluttajansuoja" in html_body
+    assert "pv" in html_body
+
+
+def test_build_daily_digest_sorts_by_score_descending() -> None:
+    def _proposal(title: str) -> SimpleNamespace:
+        return SimpleNamespace(
+            title=title,
+            organization_name="Org",
+            published_on=datetime(2026, 4, 1),
+            deadline=datetime(2026, 5, 30),
+            url="https://example.invalid/p/1",
+        )
+
+    flagged = [
+        {"proposal": _proposal("Matala"), "score": 6, "rationale": "R", "themes": []},
+        {"proposal": _proposal("Korkea"), "score": 9, "rationale": "R", "themes": []},
+        {"proposal": _proposal("Keski"), "score": 7, "rationale": "R", "themes": []},
+    ]
+
+    _, _, text_body = email_mod.build_daily_digest(flagged)
+    pos_korkea = text_body.index("Korkea")
+    pos_keski = text_body.index("Keski")
+    pos_matala = text_body.index("Matala")
+    assert pos_korkea < pos_keski < pos_matala
+
+
+def test_build_daily_digest_deadline_today() -> None:
+    proposal = SimpleNamespace(
+        title="T",
+        organization_name="Org",
+        published_on=datetime(2026, 4, 1),
+        deadline=datetime.combine(date.today(), datetime.min.time()),
+        url="https://example.invalid/p/1",
+    )
+    _, _, text_body = email_mod.build_daily_digest(
+        [{"proposal": proposal, "score": 7, "rationale": "R", "themes": []}]
+    )
+    assert "tänään" in text_body
+
+
+def test_build_daily_digest_omits_url_line_when_empty() -> None:
+    proposal = SimpleNamespace(
+        title="Ei urlia",
+        organization_name="Org",
+        published_on=datetime(2026, 4, 1),
+        deadline=None,
+        url="",
+    )
+    _, _, text_body = email_mod.build_daily_digest(
+        [{"proposal": proposal, "score": 7, "rationale": "R", "themes": []}]
+    )
+    lines = text_body.splitlines()
+    assert not any(line.strip() == "" and line.startswith("   ") for line in lines)
 
 
 def test_build_weekly_digest_handles_empty_and_linked_items() -> None:
