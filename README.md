@@ -103,7 +103,7 @@ uv run python main.py --preview-logged --days 14
 uv run python main.py --reset-state
 ```
 
-`--weekly` and `--midweek` are not yet implemented (Sprint 2).
+`--weekly` and `--midweek` are planned for v2.0 (see below).
 
 ## Scoring
 
@@ -127,6 +127,16 @@ All state lives under `state/`:
 | `score_log.jsonl`     | Full scoring history                        |
 | `nostetut.json`       | Items that crossed the notify threshold     |
 | `seen_documents.json` | Reserved for document-level deduplication   |
+
+## Planned features (v2.0)
+
+### Parliamentary committee analysis (`--weekly`, `--midweek`)
+
+In addition to lausuntopalvelu.fi, Kuluttajaliitto needs to track proceedings in relevant parliamentary committees (talousvaliokunta, sosiaali- ja terveysvaliokunta). The planned `--weekly` and `--midweek` commands would score new committee items using the same Claude-based relevance model and include them in a weekly digest.
+
+### Email delivery
+
+The email formatting and sending infrastructure is already in place. The `--daily` command builds a full HTML + plain-text digest and can send it via Gmail SMTP when credentials are configured. Completing this for production use is a v2.0 milestone.
 
 ## Development
 
