@@ -14,7 +14,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ```bash
 uv sync               # runtime dependencies only
-uv sync --extra dev   # include dev tools (pytest, black, pylint, ruff)
+uv sync --extra dev   # include dev tools (pytest, ruff)
 ```
 
 **3. Configure environment:**
@@ -91,9 +91,8 @@ uv run pytest
 uv run pytest --cov
 
 # Formatting
-uv run black .
+uv run ruff format .
 
 # Linting
 uv run ruff check .
-uv run pylint clients/ processing/ delivery/ main.py config.py
 ```

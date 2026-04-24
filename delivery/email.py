@@ -72,9 +72,9 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
           <table style="font-size:13px;color:#555;border-collapse:collapse;">
             <tr><td style="padding:2px 12px 2px 0;white-space:nowrap;">Pyytäjä</td><td>{p.organization_name}</td></tr>
             <tr><td style="padding:2px 12px 2px 0;white-space:nowrap;">Määräaika</td><td>{deadline_str}</td></tr>
-            <tr><td style="padding:2px 12px 2px 0;white-space:nowrap;">Relevanssi</td><td>{item['score']}/10</td></tr>
+            <tr><td style="padding:2px 12px 2px 0;white-space:nowrap;">Relevanssi</td><td>{item["score"]}/10</td></tr>
           </table>
-          <p style="margin:8px 0 0;font-size:13px;color:#333;">{item['rationale']}</p>
+          <p style="margin:8px 0 0;font-size:13px;color:#333;">{item["rationale"]}</p>
           {f'<p style="margin:4px 0 0;font-size:12px;color:#888;">Teemat: {themes}</p>' if themes else ""}
         </div>"""
 
@@ -141,11 +141,11 @@ def _weekly_html_sections(committee_items: dict[str, list[dict]]) -> str:
             items_html += f"""
             <div style="margin-bottom:20px;padding:14px;border-left:4px solid #1a56a0;background:#f8f9fa;">
               <p style="margin:0 0 4px;font-size:14px;font-weight:bold;">
-                {f'<a href="{item["url"]}" style="color:#1a56a0;text-decoration:none;">' if item.get('url') else ''}{item['title']}{('</a>' if item.get('url') else '')}
+                {f'<a href="{item["url"]}" style="color:#1a56a0;text-decoration:none;">' if item.get("url") else ""}{item["title"]}{("</a>" if item.get("url") else "")}
               </p>
-              <p style="margin:0 0 4px;font-size:12px;color:#666;">{item.get('eduskuntatunnus','')}</p>
-              <p style="margin:4px 0;font-size:13px;"><strong>Relevanssi:</strong> {item['score']}/10</p>
-              <p style="margin:4px 0;font-size:13px;color:#333;">{item['rationale']}</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#666;">{item.get("eduskuntatunnus", "")}</p>
+              <p style="margin:4px 0;font-size:13px;"><strong>Relevanssi:</strong> {item["score"]}/10</p>
+              <p style="margin:4px 0;font-size:13px;color:#333;">{item["rationale"]}</p>
               {f'<p style="margin:4px 0;font-size:12px;color:#888;">Teemat: {themes}</p>' if themes else ""}
             </div>"""
         sections_html += f"""

@@ -17,8 +17,6 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.8",
-    "black>=24.0",
-    "pylint>=3.2",
 ]
 
 [tool.pytest.ini_options]
@@ -28,25 +26,12 @@ pythonpath = ["."]
 target-version = "py312"
 line-length = 100
 
-[tool.black]
-line-length = 100
-target-version = ["py312"]
+[tool.ruff.lint]
+select = ["E", "W", "F", "B", "PL", "UP"]
+ignore = [
+    "E501",    # line too long — HTML templates make this unavoidable
+    "PLR2004", # magic-value-comparison — noisy for test assertions and score checks
+]
 
 [tool.coverage.run]
 branch = true
-
-[tool.pylint.main]
-py-version = "3.12"
-ignore = [".venv", "__pycache__"]
-ignore-paths = ["^tests/.*", "^scripts/.*"]
-
-[tool.pylint.messages_control]
-disable = [
-    "line-too-long",
-    "import-error",
-    "no-name-in-module",
-    "missing-module-docstring",
-    "missing-function-docstring",
-    "missing-class-docstring",
-    "too-few-public-methods",
-]

@@ -5,7 +5,7 @@ import json
 import os
 import sys
 from datetime import date as date_type
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -19,8 +19,6 @@ from delivery.email import build_daily_digest, send_email
 from processing.llm_scorer import score_item
 
 load_dotenv()
-
-UTC = timezone.utc
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +104,9 @@ def _score_proposal(client: httpx.Client, proposal: Proposal, ctx: dict) -> dict
     if in_jakelu and result["score"] < 10:
         result["score"] += 1
         base = (result.get("rationale") or "").strip()
-        result["rationale"] = f"{base} Jakelulistalla on Kuluttajaliitto ry, mikä nostaa relevanssia.".strip()
+        result["rationale"] = (
+            f"{base} Jakelulistalla on Kuluttajaliitto ry, mikä nostaa relevanssia.".strip()
+        )
 
     result["jakelu_kuluttajaliitto"] = in_jakelu
     return result
@@ -241,11 +241,11 @@ def cmd_review_logged(days: int = 7) -> None:
 
     with config.SCORE_LOG_PATH.open(encoding="utf-8") as f:
         for line in f:
-            line = line.strip()
-            if not line:
+            stripped = line.strip()
+            if not stripped:
                 continue
             try:
-                entry = json.loads(line)
+                entry = json.loads(stripped)
             except json.JSONDecodeError:
                 continue
             score = entry.get("score", 0)

@@ -15,36 +15,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install \
-            httpx \
-            anthropic \
-            python-dotenv \
-            pytest \
-            pytest-cov \
-            ruff \
-            black \
-            pylint
+        run: uv sync --extra dev
 
       - name: Format check
-        run: python -m black --check .
+        run: uv run ruff format --check .
 
-      - name: Ruff
-        run: python -m ruff check .
+      - name: Lint
+        run: uv run ruff check .
 
-      - name: Pylint
-        run: python -m pylint main.py clients delivery processing
-
-      - name: Pytest with coverage reports
+      - name: Pytest with coverage
         run: |
-          python -m pytest -q \
+          uv run pytest -q \
             --cov=. \
             --cov-report=term-missing \
             --cov-report=json:coverage.json \
@@ -52,7 +37,7 @@ jobs:
 
       - name: Coverage thresholds (line + branch)
         run: |
-          python scripts/check_coverage_thresholds.py \
+          uv run python scripts/check_coverage_thresholds.py \
             --file coverage.json \
             --line 95 \
             --branch 90

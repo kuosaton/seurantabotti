@@ -8,7 +8,7 @@ import config
 import main
 from clients.lausuntopalvelu import Proposal
 import delivery.email as email_mod
-import processing.llm_scorer as llm_scorer
+from processing import llm_scorer
 
 
 def _setup_state_paths(tmp_path, monkeypatch) -> tuple:

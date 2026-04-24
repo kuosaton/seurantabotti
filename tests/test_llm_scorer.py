@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import processing.llm_scorer as llm_scorer
+from processing import llm_scorer
 
 
 def test_format_statements_includes_excerpt_when_present() -> None:
