@@ -48,7 +48,7 @@ uv run python main.py
 
 Launches an interactive menu for easy access to all commands. Choose from numbered options:
 
-```
+```text
 Seurantabotti
 ─────────────────────────────────────
 1  Daily check
