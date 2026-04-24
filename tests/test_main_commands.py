@@ -468,6 +468,70 @@ def test_cmd_preview_logged_filters_above_notify_threshold(tmp_path, monkeypatch
     assert "COUNT:1" in out  # only the borderline item (score 5)
 
 
+def test_cmd_preview_logged_invalid_dates_still_builds(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    now = datetime.now(main.UTC).isoformat()
+    entry = {
+        "timestamp": now,
+        "title": "Virheelliset päivämäärät",
+        "score": 5,
+        "rationale": "R",
+        "themes": [],
+        "published_on": "not-a-date",
+        "deadline": "also-not-a-date",
+    }
+    score_log_path.write_text(json.dumps(entry) + "\n", encoding="utf-8")
+
+    captured_items: list = []
+    monkeypatch.setattr(
+        main,
+        "build_daily_digest",
+        lambda items: captured_items.extend(items) or ("S", "H", "T"),
+    )
+
+    main.cmd_preview_logged(days=7)
+    assert len(captured_items) == 1
+    assert captured_items[0]["proposal"].published_on is None
+    assert captured_items[0]["proposal"].deadline is None
+
+
+def test_cmd_preview_nostetut_invalid_published_on_still_builds(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    _seen_path, _score_log_path, nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    nostetut_path.write_text(
+        json.dumps(
+            [
+                {
+                    "title": "Aihe",
+                    "organization": "Org",
+                    "published_on": "not-a-date",
+                    "url": "https://example.invalid/p/1",
+                    "score": 7,
+                    "rationale": "R",
+                    "themes": [],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    captured_items: list = []
+    monkeypatch.setattr(
+        main,
+        "build_daily_digest",
+        lambda items: captured_items.extend(items) or ("S", "H", "T"),
+    )
+
+    main.cmd_preview_nostetut()
+    assert len(captured_items) == 1
+    assert captured_items[0]["proposal"].published_on is None
+
+
 def test_cmd_reset_state_clears_files(tmp_path, monkeypatch, capsys) -> None:
     seen_path, score_log_path, nostetut_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch

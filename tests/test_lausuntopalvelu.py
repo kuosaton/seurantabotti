@@ -114,6 +114,19 @@ def test_get_participation_flags_both_false_when_absent() -> None:
     assert has_responded is False
 
 
+def test_get_participation_flags_malformed_users_json_returns_false() -> None:
+    response = Mock()
+    # Regex matches the [...] but the content is not valid JSON
+    response.text = '<html><body>"UsersWhoAnswered":[{invalid: json}]</body></html>'
+    response.raise_for_status.return_value = None
+    client = Mock()
+    client.get.return_value = response
+
+    in_jakelu, has_responded = get_participation_flags(client, "abc", "Kuluttajaliit")
+    assert in_jakelu is False
+    assert has_responded is False
+
+
 def test_get_participation_flags_single_fetch() -> None:
     response = Mock()
     response.text = '<html><body>"UsersWhoAnswered":[]</body></html>'
