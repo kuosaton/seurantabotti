@@ -245,7 +245,6 @@ def test_cmd_daily_non_dry_run_sends_email(tmp_path, monkeypatch) -> None:
             {"subject": subject, "html": html_body, "text": text_body}
         ),
     )
-
     main.cmd_daily(dry_run=False)
     assert calls["subject"] == "S"
     assert calls["html"] == "<p>H</p>"
@@ -261,6 +260,37 @@ def test_cmd_review_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:
     main.cmd_review_logged(days=7)
     out = capsys.readouterr().out
     assert "No score log found." in out
+
+
+def test_cmd_reset_state_clears_files(tmp_path, monkeypatch, capsys) -> None:
+    seen_path, score_log_path, nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    monkeypatch.setattr(config, "SEEN_DOCUMENTS_PATH", tmp_path / "state" / "seen_documents.json")
+    seen_path.write_text('{"old": true}', encoding="utf-8")
+    score_log_path.write_text('{"score": 5}\n', encoding="utf-8")
+    nostetut_path.write_text('[{"score": 8}]', encoding="utf-8")
+
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+    main.cmd_reset_state()
+
+    assert json.loads(seen_path.read_text()) == {}
+    assert json.loads(nostetut_path.read_text()) == []
+    assert score_log_path.read_text() == ""
+    assert "State reset." in capsys.readouterr().out
+
+
+def test_cmd_reset_state_aborts_on_no(tmp_path, monkeypatch, capsys) -> None:
+    seen_path, _score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    seen_path.write_text('{"old": true}', encoding="utf-8")
+
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+    main.cmd_reset_state()
+
+    assert json.loads(seen_path.read_text()) == {"old": True}
+    assert "Aborted." in capsys.readouterr().out
 
 
 def test_cmd_preview_nostetut_empty_file(tmp_path, monkeypatch, capsys) -> None:

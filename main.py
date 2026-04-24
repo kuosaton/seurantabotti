@@ -173,6 +173,11 @@ def cmd_daily(dry_run: bool) -> None:
         print("Nothing new to score.")
         return
 
+    answer = input(f"Score {len(new_proposals)} proposal(s)? [Y/n] ").strip().lower()
+    if answer not in ("y", ""):
+        print("Aborted.")
+        return
+
     flagged = []
     total_logged = 0
 
@@ -317,6 +322,19 @@ def cmd_preview_nostetut() -> None:
     print(text_body)
 
 
+def cmd_reset_state() -> None:
+    print("This will erase all state: seen proposals, score log, and nostetut.")
+    answer = input("Continue? [y/N] ").strip().lower()
+    if answer != "y":
+        print("Aborted.")
+        return
+    _save_json(config.SEEN_PROPOSALS_PATH, {})
+    _save_json(config.SEEN_DOCUMENTS_PATH, {})
+    config.NOSTETUT_PATH.write_text("[]", encoding="utf-8")
+    config.SCORE_LOG_PATH.write_text("", encoding="utf-8")
+    print("State reset.")
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -357,6 +375,11 @@ def main() -> None:
         action="store_true",
         help="Preview nostetut.json as a formatted email digest",
     )
+    parser.add_argument(
+        "--reset-state",
+        action="store_true",
+        help="Erase all state files and start fresh",
+    )
     args = parser.parse_args()
 
     if not any(
@@ -367,6 +390,7 @@ def main() -> None:
             args.update_context,
             args.review_logged,
             args.preview_nostetut,
+            args.reset_state,
         ]
     ):
         parser.print_help()
@@ -389,6 +413,9 @@ def main() -> None:
 
     if args.preview_nostetut:
         cmd_preview_nostetut()
+
+    if args.reset_state:
+        cmd_reset_state()
 
 
 if __name__ == "__main__":

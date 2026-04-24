@@ -56,6 +56,9 @@ uv run python main.py --review-logged --days 14
 
 # Preview nostetut.json formatted as an email digest (without sending)
 uv run python main.py --preview-nostetut
+
+# Erase all state files and start fresh
+uv run python main.py --reset-state
 ```
 
 `--weekly` and `--midweek` are not yet implemented (Sprint 2).

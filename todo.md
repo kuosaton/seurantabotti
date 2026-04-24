@@ -6,6 +6,4 @@
 - Support for valiokunta analysis (--weekly)
 - Better email preview formatting
 - Email support
-- check deps for updates
-- upgrade used actions (e.g., bump actions/checkout@v4 to v6 if possible)
 - check used llm model effort level
