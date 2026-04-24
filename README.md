@@ -14,7 +14,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ```bash
 uv sync               # runtime dependencies only
-uv sync --extra dev   # include dev tools (pytest, ruff)
+uv sync --extra dev   # include dev tools (pytest, ruff, pyright, pre-commit)
 ```
 
 **3. Configure environment:**
@@ -97,7 +97,7 @@ Each proposal is scored 0–10 by Claude against Kuluttajaliitto's recent statem
 | 4–6   | Logged to `state/score_log.jsonl`, no email     |
 | 0–3   | Dropped silently                                |
 
-Being on Kuluttajaliitto's jakelu list adds +1 to the score.
+If Kuluttajaliitto appears on the jakelu list, that proposal is skipped before scoring.
 
 ## State files
 
@@ -113,13 +113,15 @@ All state lives under `state/`:
 ## Development
 
 ```bash
-# Tests
-uv run pytest
-uv run pytest --cov
+# Canonical quality gate (same command used in CI)
+make check
 
-# Formatting
-uv run ruff format .
+# Fast local smoke checks
+make quick-test
 
-# Linting
-uv run ruff check .
+# Optional: run configured hooks across all files
+make precommit
+
+# One-time install for git hooks (pre-commit + pre-push)
+make precommit-install
 ```

@@ -10,6 +10,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pre-commit>=4.5.1",
     "pyright>=1.1.408",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
@@ -39,4 +40,5 @@ typeCheckingMode = "basic"
 include = ["main.py", "config.py", "clients", "delivery", "processing"]
 exclude = ["tests"]
 reportMissingTypeStubs = false
+strict = ["processing"]
 

@@ -1,0 +1,25 @@
+minimum_pre_commit_version: '3.6.0'
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.11
+    hooks:
+      - id: ruff-format
+        args: ['--check']
+      - id: ruff-check
+
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: uv run --extra dev pyright
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: pytest-quick
+        name: pytest quick smoke
+        entry: uv run --extra dev pytest -q tests/test_llm_scorer.py tests/test_main_cli.py
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

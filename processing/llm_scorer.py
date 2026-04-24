@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import json
 import re
+from typing import Any, TypedDict, cast
 
 import anthropic
 
@@ -47,18 +48,29 @@ asia on selvästi relevantti.\
 """
 
 
-def _format_statements(statements: list[dict]) -> str:
-    lines = []
+class StatementLike(TypedDict, total=False):
+    date: str
+    title: str
+    tags: list[str]
+    excerpt: str
+
+
+def _format_statements(statements: list[StatementLike]) -> str:
+    lines: list[str] = []
     for s in statements:
-        lines.append(f"- {s['date']}: {s['title']}")
-        if s.get("tags"):
-            lines.append(f"  Teemat: {', '.join(s['tags'])}")
-        if s.get("excerpt"):
-            lines.append(f"  {s['excerpt'][:450]}")
+        date = s.get("date", "")
+        title = s.get("title", "")
+        lines.append(f"- {date}: {title}")
+        tags = s.get("tags")
+        if tags:
+            lines.append(f"  Teemat: {', '.join(tags)}")
+        excerpt = s.get("excerpt")
+        if excerpt:
+            lines.append(f"  {excerpt[:450]}")
     return "\n".join(lines)
 
 
-def _parse_response_json(raw_text: str) -> dict:
+def _parse_response_json(raw_text: str) -> dict[str, Any]:
     text = raw_text.strip()
     candidates: list[str] = [text] if text else []
 
@@ -88,7 +100,7 @@ def _parse_response_json(raw_text: str) -> dict:
         except json.JSONDecodeError:
             continue
         if isinstance(parsed, dict):
-            return parsed
+            return cast(dict[str, Any], parsed)
 
     preview = text[:180].replace("\n", "\\n")
     raise ValueError(f"Model response was not valid JSON object: {preview!r}")
@@ -98,9 +110,9 @@ def score_item(
     title: str,
     abstract: str,
     source: str,
-    context: dict,
-    signals: dict | None = None,
-) -> dict:
+    context: dict[str, Any],
+    signals: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Score one item for relevance to Kuluttajaliitto.
 
