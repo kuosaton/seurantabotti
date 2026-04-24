@@ -251,6 +251,77 @@ def test_cmd_daily_non_dry_run_sends_email(tmp_path, monkeypatch) -> None:
     assert calls["text"] == "T"
 
 
+def test_cmd_daily_aborts_on_user_no(tmp_path, monkeypatch, capsys) -> None:
+    seen_path, score_log_path, nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+
+    proposal = Proposal(
+        id="abort-1",
+        title="Keskeyta",
+        organization_name="Testi",
+        abstract="Kuvaus",
+        deadline=datetime.now(main.UTC) + timedelta(days=3),
+        published_on=datetime.now(main.UTC),
+        url="https://example.invalid/p/abort-1",
+    )
+
+    monkeypatch.setattr(main, "fetch_recent", lambda client, top: [proposal])
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+
+    def _should_not_score(*args, **kwargs):
+        raise AssertionError("score_item should not run after user abort")
+
+    monkeypatch.setattr(main, "score_item", _should_not_score)
+
+    main.cmd_daily(dry_run=True)
+    out = capsys.readouterr().out
+    assert "Aborted." in out
+    assert json.loads(seen_path.read_text(encoding="utf-8")) == {}
+    assert score_log_path.read_text(encoding="utf-8") == ""
+    assert json.loads(nostetut_path.read_text(encoding="utf-8")) == []
+
+
+def test_cmd_daily_dry_run_prints_digest_but_does_not_send(tmp_path, monkeypatch, capsys) -> None:
+    seen_path, _score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    proposal = Proposal(
+        id="dryrun-1",
+        title="Dryrun nostettava",
+        organization_name="Testi",
+        abstract="Kuvaus",
+        deadline=datetime.now(main.UTC) + timedelta(days=3),
+        published_on=datetime.now(main.UTC),
+        url="https://example.invalid/p/dryrun-1",
+    )
+
+    monkeypatch.setattr(main, "fetch_recent", lambda client, top: [proposal])
+    monkeypatch.setattr(main, "proposal_has_recipient", lambda client, pid, name: False)
+    monkeypatch.setattr(
+        main,
+        "score_item",
+        lambda *args, **kwargs: {"score": 8, "rationale": "OK", "themes": []},
+    )
+    monkeypatch.setattr(
+        main, "build_daily_digest", lambda flagged: ("SUB", "<p>H</p>", "TEXT BODY")
+    )
+
+    def _should_not_send(*args, **kwargs):
+        raise AssertionError("send_email should not run in dry-run mode")
+
+    monkeypatch.setattr(main, "send_email", _should_not_send)
+
+    main.cmd_daily(dry_run=True)
+    out = capsys.readouterr().out
+    assert "--- DRY RUN: would send email ---" in out
+    assert "Subject: SUB" in out
+    assert "TEXT BODY" in out
+
+    seen = json.loads(seen_path.read_text(encoding="utf-8"))
+    assert seen["dryrun-1"]["notified"] is False
+
+
 def test_cmd_review_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:
     _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
@@ -260,6 +331,38 @@ def test_cmd_review_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:
     main.cmd_review_logged(days=7)
     out = capsys.readouterr().out
     assert "No score log found." in out
+
+
+def test_cmd_review_logged_prints_only_flagged_section(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    now = datetime.now(main.UTC).isoformat()
+    score_log_path.write_text(
+        json.dumps({"timestamp": now, "title": "Nostettava", "score": 8, "rationale": "R"}) + "\n",
+        encoding="utf-8",
+    )
+
+    main.cmd_review_logged(days=7)
+    out = capsys.readouterr().out
+    assert "NOSTETTU" in out
+    assert "LOKITETTU" not in out
+
+
+def test_cmd_review_logged_prints_only_borderline_section(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    now = datetime.now(main.UTC).isoformat()
+    score_log_path.write_text(
+        json.dumps({"timestamp": now, "title": "Rajalla", "score": 5, "rationale": "R"}) + "\n",
+        encoding="utf-8",
+    )
+
+    main.cmd_review_logged(days=7)
+    out = capsys.readouterr().out
+    assert "NOSTETTU" not in out
+    assert "LOKITETTU" in out
 
 
 def test_cmd_reset_state_clears_files(tmp_path, monkeypatch, capsys) -> None:
@@ -340,3 +443,35 @@ def test_cmd_preview_nostetut_invalid_deadline_still_builds(tmp_path, monkeypatc
     assert "Subject: SUBJ" in out
     assert "TEXT -" not in out
     assert "TEXT" in out
+
+
+def test_cmd_preview_nostetut_missing_deadline_still_builds(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, _score_log_path, nostetut_path, _context_path = _setup_state_paths(
+        tmp_path, monkeypatch
+    )
+    nostetut_path.write_text(
+        json.dumps(
+            [
+                {
+                    "title": "Aihe ilman deadlinea",
+                    "organization": "Org",
+                    "url": "https://example.invalid/p/2",
+                    "score": 7,
+                    "rationale": "R",
+                    "themes": ["t"],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    def _fake_build_daily_digest(flagged):
+        assert flagged[0]["proposal"].deadline is None
+        return "SUBJ3", "HTML3", "TEXT3"
+
+    monkeypatch.setattr(main, "build_daily_digest", _fake_build_daily_digest)
+
+    main.cmd_preview_nostetut()
+    out = capsys.readouterr().out
+    assert "Subject: SUBJ3" in out
+    assert "TEXT3" in out

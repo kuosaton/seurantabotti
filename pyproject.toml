@@ -10,6 +10,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pyright>=1.1.408",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
     "ruff>=0.15.11",
@@ -31,4 +32,11 @@ ignore = [
 
 [tool.coverage.run]
 branch = true
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+include = ["main.py", "config.py", "clients", "delivery", "processing"]
+exclude = ["tests"]
+reportMissingTypeStubs = false
 

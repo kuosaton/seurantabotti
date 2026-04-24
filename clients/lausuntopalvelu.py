@@ -46,7 +46,9 @@ def _parse_dt(s: str | None) -> datetime | None:
         return None
 
 
-def _get(props: ET.Element, field: str) -> str | None:
+def _get(props: ET.Element | None, field: str) -> str | None:
+    if props is None:
+        return None
     el = props.find(f"d:{field}", NS)
     return el.text if el is not None else None
 

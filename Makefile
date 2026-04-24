@@ -1,19 +1,22 @@
-.PHONY: check format lint test
+.PHONY: check format lint typecheck test
 
-check: format lint test
+check: format lint typecheck test
 
 format:
-	uv run ruff format --check .
+	uv run --extra dev ruff format --check .
 
 lint:
-	uv run ruff check .
+	uv run --extra dev ruff check .
+
+typecheck:
+	uv run --extra dev pyright
 
 test:
-	uv run pytest -q \
+	uv run --extra dev pytest -q \
 		--cov=. \
 		--cov-report=term-missing \
 		--cov-report=json:coverage.json
-	uv run python scripts/check_coverage_thresholds.py \
+	uv run --extra dev python scripts/check_coverage_thresholds.py \
 		--file coverage.json \
 		--line 95 \
 		--branch 85

@@ -118,3 +118,17 @@ def test_parse_response_json_ignores_empty_fenced_block() -> None:
     )
 
     assert parsed["score"] == 3
+
+
+def test_parse_response_json_rejects_unbalanced_object() -> None:
+    with pytest.raises(ValueError, match="not valid JSON object"):
+        llm_scorer._parse_response_json('prefix {"score": 1, "rationale": "oops"')
+
+
+def test_parse_response_json_uses_first_complete_object_when_multiple() -> None:
+    parsed = llm_scorer._parse_response_json(
+        '{"score": 2, "rationale": "first", "themes": []} '
+        '{"score": 9, "rationale": "second", "themes": []}'
+    )
+
+    assert parsed["score"] == 2

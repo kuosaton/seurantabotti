@@ -192,6 +192,60 @@ def test_interactive_menu_invalid_choice(monkeypatch) -> None:
     main.main()
 
 
+def test_interactive_menu_choice_review_custom_days_valid(monkeypatch) -> None:
+    called = {"days": None}
+    inputs = ["5", "14", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        if prompt.strip() == ">":
+            return next(input_iter)
+        if "Days to look back" in prompt:
+            return next(input_iter)
+        return "y"
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr(main, "cmd_review_logged", lambda days: called.__setitem__("days", days))
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    main.main()
+    assert called["days"] == 14
+
+
+def test_interactive_menu_choice_review_custom_days_invalid(monkeypatch, capsys) -> None:
+    called = {"count": 0}
+    inputs = ["5", "oops", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        if prompt.strip() == ">":
+            return next(input_iter)
+        if "Days to look back" in prompt:
+            return next(input_iter)
+        return "y"
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr(
+        main,
+        "cmd_review_logged",
+        lambda days: called.__setitem__("count", called["count"] + 1),
+    )
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    main.main()
+    out = capsys.readouterr().out
+    assert "Invalid number" in out
+    assert called["count"] == 0
+
+
+def test_cmd_interactive_handles_keyboard_interrupt(monkeypatch) -> None:
+    def _raise_interrupt(prompt):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("builtins.input", _raise_interrupt)
+    main.cmd_interactive()
+
+
 def test_unimplemented_commands_exit() -> None:
     with pytest.raises(SystemExit) as weekly:
         main.cmd_weekly(dry_run=True)
@@ -265,3 +319,24 @@ def test_main_dispatches_reset_state_flag(monkeypatch) -> None:
 
     main.main()
     assert called["reset"] is True
+
+
+def test_main_dispatches_interactive_flag(monkeypatch) -> None:
+    called = {"interactive": False}
+
+    monkeypatch.setattr(main, "cmd_update_context", lambda: None)
+    monkeypatch.setattr(main, "cmd_daily", lambda dry_run: None)
+    monkeypatch.setattr(main, "cmd_weekly", lambda dry_run: None)
+    monkeypatch.setattr(main, "cmd_midweek", lambda dry_run: None)
+    monkeypatch.setattr(main, "cmd_review_logged", lambda days: None)
+    monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: None)
+    monkeypatch.setattr(main, "cmd_reset_state", lambda: None)
+    monkeypatch.setattr(
+        main,
+        "cmd_interactive",
+        lambda: called.__setitem__("interactive", True),
+    )
+    monkeypatch.setattr("sys.argv", ["main.py", "--interactive"])
+
+    main.main()
+    assert called["interactive"] is True
