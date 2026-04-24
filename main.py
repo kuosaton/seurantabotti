@@ -109,64 +109,49 @@ def cmd_daily(dry_run: bool) -> None:
     flagged = []
     total_logged = 0
 
-    for p in new_proposals:
-        in_kuluttajaliitto_jakelu = False
-        try:
-            in_kuluttajaliitto_jakelu = proposal_has_recipient(
-                client,
-                p.id,
-                "Kuluttajaliitto ry",
-            )
-        except Exception as exc:
-            print(f"  [WARN] could not read Jakelu for {p.id}: {exc}", file=sys.stderr)
+    with httpx.Client() as client:
+        for p in new_proposals:
+            in_kuluttajaliitto_jakelu = False
+            try:
+                in_kuluttajaliitto_jakelu = proposal_has_recipient(
+                    client,
+                    p.id,
+                    "Kuluttajaliitto ry",
+                )
+            except Exception as exc:
+                print(f"  [WARN] could not read Jakelu for {p.id}: {exc}", file=sys.stderr)
 
-        try:
-            result = score_item(
-                p.title,
-                p.abstract,
-                "lausuntopalvelu",
-                ctx,
-                signals={"jakelu_kuluttajaliitto": in_kuluttajaliitto_jakelu},
-            )
-        except Exception as exc:
-            print(f"  [ERROR] scoring failed for {p.id}: {exc}", file=sys.stderr)
-            continue
+            try:
+                result = score_item(
+                    p.title,
+                    p.abstract,
+                    "lausuntopalvelu",
+                    ctx,
+                    signals={"jakelu_kuluttajaliitto": in_kuluttajaliitto_jakelu},
+                )
+            except Exception as exc:
+                print(f"  [ERROR] scoring failed for {p.id}: {exc}", file=sys.stderr)
+                continue
 
-        score = result["score"]
-        if in_kuluttajaliitto_jakelu and score < 10:
-            score += 1
-            result["score"] = score
-            base_rationale = (result.get("rationale") or "").strip()
-            extra = "Jakelulistalla on Kuluttajaliitto ry, mikä nostaa relevanssia."
-            result["rationale"] = f"{base_rationale} {extra}".strip()
+            score = result["score"]
+            if in_kuluttajaliitto_jakelu and score < 10:
+                score += 1
+                result["score"] = score
+                base_rationale = (result.get("rationale") or "").strip()
+                extra = "Jakelulistalla on Kuluttajaliitto ry, mikä nostaa relevanssia."
+                result["rationale"] = f"{base_rationale} {extra}".strip()
 
-        notified = score >= config.NOTIFY_THRESHOLD and not dry_run
+            notified = score >= config.NOTIFY_THRESHOLD and not dry_run
 
-        seen[p.id] = {
-            "first_seen": datetime.now(UTC).isoformat(),
-            "title": p.title,
-            "score": score,
-            "notified": notified,
-            "notified_at": datetime.now(UTC).isoformat() if notified else None,
-        }
-
-        _append_log(
-            {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "source": "lausuntopalvelu",
-                "id": p.id,
+            seen[p.id] = {
+                "first_seen": datetime.now(UTC).isoformat(),
                 "title": p.title,
                 "score": score,
-                "rationale": result.get("rationale", ""),
-                "themes": result.get("themes", []),
-                "jakelu_kuluttajaliitto": in_kuluttajaliitto_jakelu,
                 "notified": notified,
+                "notified_at": datetime.now(UTC).isoformat() if notified else None,
             }
-        )
 
-        if score >= config.NOTIFY_THRESHOLD:
-            flagged.append({"proposal": p, **result})
-            _append_nostetut(
+            _append_log(
                 {
                     "timestamp": datetime.now(UTC).isoformat(),
                     "source": "lausuntopalvelu",
@@ -176,16 +161,32 @@ def cmd_daily(dry_run: bool) -> None:
                     "rationale": result.get("rationale", ""),
                     "themes": result.get("themes", []),
                     "jakelu_kuluttajaliitto": in_kuluttajaliitto_jakelu,
-                    "deadline": p.deadline.date().isoformat() if p.deadline else None,
-                    "organization": p.organization_name,
-                    "url": p.url,
+                    "notified": notified,
                 }
             )
-        elif score >= config.LOG_THRESHOLD:
-            total_logged += 1
-            print(f"  [LOG {score}/10] {p.title[:70]}")
-        else:
-            print(f"  [DROP {score}/10] {p.title[:70]}")
+
+            if score >= config.NOTIFY_THRESHOLD:
+                flagged.append({"proposal": p, **result})
+                _append_nostetut(
+                    {
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "source": "lausuntopalvelu",
+                        "id": p.id,
+                        "title": p.title,
+                        "score": score,
+                        "rationale": result.get("rationale", ""),
+                        "themes": result.get("themes", []),
+                        "jakelu_kuluttajaliitto": in_kuluttajaliitto_jakelu,
+                        "deadline": p.deadline.date().isoformat() if p.deadline else None,
+                        "organization": p.organization_name,
+                        "url": p.url,
+                    }
+                )
+            elif score >= config.LOG_THRESHOLD:
+                total_logged += 1
+                print(f"  [LOG {score}/10] {p.title[:70]}")
+            else:
+                print(f"  [DROP {score}/10] {p.title[:70]}")
 
     _save_json(config.SEEN_PROPOSALS_PATH, seen)
 

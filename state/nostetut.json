@@ -1,40 +1,68 @@
 [
   {
-    "timestamp": "2026-04-22T14:11:29.173841+00:00",
+    "timestamp": "2026-04-22T16:24:47.663944+00:00",
     "source": "lausuntopalvelu",
     "id": "455870b4-9333-4f89-990f-0ef39023c224",
     "title": "Lausuntopyyntö luonnoksesta hallituksen esitykseksi eduskunnalle apteekkitoiminnan kehittämistä koskevaksi lainsäädännöksi",
-    "score": 7,
-    "rationale": "Apteekkitoiminnan kehittäminen koskee kuluttajia suoraan lääkepalveluiden saatavuuden, hinnoittelun ja laadun kautta. Esityksessä käsitellään mm. verkkoapteekkien hinnoittelua, itsehoitolääkkeiden verkkomyyntiä ja asiakkaiden yhdenvertaista asemaa, jotka ovat kuluttajanäkökulmasta keskeisiä teemoja. Kuluttajaliitto on aiemmin lausunut sote-palveluihin ja asiakkaiden oikeuksiin liittyvistä kysymyksistä.",
+    "score": 9,
+    "rationale": "Asia koskee suoraan kuluttajien apteekkipalvelujen saatavuutta, yhdenvertaisuutta ja hintasääntelyä, mikä on selvästi Kuluttajaliiton ydinaluetta. Kuluttajaliitto on jakelu-listassa, ja aiemmat lausunnot osoittavat aktiivisuuden sote-palveluiden, hintasääntelyn ja kuluttajien yhdenvertaisen kohtelun kysymyksissä. Jakelulistalla on Kuluttajaliitto ry, mikä nostaa relevanssia.",
     "themes": [
       "apteekkipalvelut",
-      "lääkkeiden hinnoittelu",
-      "kuluttajan asema sote-palveluissa"
+      "lääkkeiden hintasääntely",
+      "kuluttajien yhdenvertaisuus"
     ],
+    "jakelu_kuluttajaliitto": true,
     "deadline": "2026-06-01",
     "organization": "Sosiaali- ja terveysministeriö",
     "url": "https://www.lausuntopalvelu.fi/FI/Proposal/Participation?proposalId=455870b4-9333-4f89-990f-0ef39023c224"
   },
   {
-    "timestamp": "2026-04-22T14:16:26.948735+00:00",
+    "timestamp": "2026-04-22T16:26:23.972680+00:00",
+    "source": "lausuntopalvelu",
+    "id": "0a1de337-e454-46ca-95cf-4a0999c0d6f0",
+    "title": "Lausuntopyyntö etukäteismaksusta tuomioistuimissa",
+    "score": 8,
+    "rationale": "Asia koskee tuomioistuinten etukäteismaksuja, mikä liittyy kuluttajien oikeuksiin hakea muutosta ja saada oikeussuojaa. Kuluttajaliitto on hiljattain lausunut siviiliprosessin sujuvoittamisesta lentoviivästyshyvitysasioissa, joten prosessuaaliset kysymykset ovat ajankohtaisia liitolle. Lisäksi Kuluttajaliitto on nimetty jakelulistalle. Jakelulistalla on Kuluttajaliitto ry, mikä nostaa relevanssia.",
+    "themes": [
+      "oikeussuoja",
+      "tuomioistuinmenettely",
+      "kuluttajien oikeusasema"
+    ],
+    "jakelu_kuluttajaliitto": true,
+    "deadline": "2026-05-22",
+    "organization": "Oikeusministeriö",
+    "url": "https://www.lausuntopalvelu.fi/FI/Proposal/Participation?proposalId=0a1de337-e454-46ca-95cf-4a0999c0d6f0"
+  },
+  {
+    "timestamp": "2026-04-22T16:29:30.724049+00:00",
     "source": "lausuntopalvelu",
     "id": "5faa86a5-b3f3-4d42-adf4-f3f16ce9ddac",
     "title": "Luonnos hallituksen esitykseksi laiksi asumisoikeusasunnoista annetun lain muuttamisesta",
     "score": 7,
-    "rationale": "Asia koskee asumisoikeusasuntojärjestelmää, joka liittyy asumiseen yhtenä Kuluttajaliiton painopistealueena. Erityisesti asumisoikeuden haltijoiden asumisturva ja muutokset heidän oikeuksiinsa ovat kuluttajanäkökulmasta merkityksellisiä, vaikka kyse on enemmän asuntopolitiikasta kuin suorasta kuluttajansuojasta.",
-    "themes": ["asuminen", "asumisoikeusasunnot", "asumisturva"],
+    "rationale": "Asumisoikeusasunnot ovat asumiseen liittyvä kuluttaja-asia, ja ehdotus vaikuttaa suoraan asumisoikeuden haltijoiden asumisturvaan ja oikeuksiin. Kuluttajaliitto on lausunut asumiseen liittyvistä aiheista, mutta asumisoikeusjärjestelmä ei ole sen keskeisintä ydinaluetta.",
+    "themes": [
+      "asuminen",
+      "asumisoikeus",
+      "asumisturva"
+    ],
+    "jakelu_kuluttajaliitto": false,
     "deadline": "2026-05-08",
     "organization": "Ympäristöministeriö",
     "url": "https://www.lausuntopalvelu.fi/FI/Proposal/Participation?proposalId=5faa86a5-b3f3-4d42-adf4-f3f16ce9ddac"
   },
   {
-    "timestamp": "2026-04-22T14:16:56.520105+00:00",
+    "timestamp": "2026-04-22T16:30:02.172315+00:00",
     "source": "lausuntopalvelu",
     "id": "bc169b5e-8129-409c-a217-e8f1ef99664e",
     "title": "Begäran om utlåtande om utkastet till regeringens proposition med förslag till lag om ändring av lagen om bostadsköp",
     "score": 8,
-    "rationale": "Asia koskee asuntokauppalain muuttamista, mikä on Kuluttajaliiton ydinaluetta – asuminen ja asuntokauppa ovat keskeisiä kuluttajansuojakysymyksiä, joista Kuluttajaliitto on toistuvasti lausunut. Asuntokauppalain muutokset vaikuttavat suoraan kuluttajien oikeuksiin asuntokaupoissa.",
-    "themes": ["asuntokauppa", "kuluttajansuoja", "asuminen"],
+    "rationale": "Asuntokauppalain muuttaminen koskee suoraan kuluttajien keskeisiä oikeuksia asunnonostossa, mikä on Kuluttajaliiton ydinaluetta. Kuluttajaliitto on aiemmin lausunut mm. asumiseen ja valmiuslain asuntosääntelyyn liittyvistä asioista.",
+    "themes": [
+      "asuntokauppa",
+      "kuluttajansuoja",
+      "asuminen"
+    ],
+    "jakelu_kuluttajaliitto": false,
     "deadline": "2026-04-27",
     "organization": "Oikeusministeriö",
     "url": "https://www.lausuntopalvelu.fi/FI/Proposal/Participation?proposalId=bc169b5e-8129-409c-a217-e8f1ef99664e"

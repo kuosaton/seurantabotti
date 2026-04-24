@@ -15,12 +15,16 @@ def send_email(
     subject: str,
     html_body: str,
     text_body: str,
-    to: str = os.environ.get("RECIPIENT_EMAIL", ""),
+    to: str | None = None,
     smtp_host: str = "smtp.gmail.com",
     smtp_port: int = 587,
-    smtp_user: str = os.environ.get("SMTP_USER", ""),
-    smtp_pass: str = os.environ.get("SMTP_PASS", ""),
+    smtp_user: str | None = None,
+    smtp_pass: str | None = None,
 ) -> None:
+    to = os.environ.get("RECIPIENT_EMAIL", "") if to is None else to
+    smtp_user = os.environ.get("SMTP_USER", "") if smtp_user is None else smtp_user
+    smtp_pass = os.environ.get("SMTP_PASS", "") if smtp_pass is None else smtp_pass
+
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = smtp_user

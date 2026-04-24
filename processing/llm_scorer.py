@@ -4,7 +4,15 @@ import json
 
 import anthropic
 
-_client = anthropic.Anthropic()
+_client: anthropic.Anthropic | None = None
+
+
+def _get_client() -> anthropic.Anthropic:
+    global _client
+    if _client is None:
+        _client = anthropic.Anthropic()
+    return _client
+
 
 SYSTEM_PROMPT = """\
 Olet Kuluttajaliiton avustaja, joka arvioi lausuntopalvelu.fi:n lausuntopyyntöjen \
@@ -77,7 +85,7 @@ def score_item(
         f"{signal_text}"
     )
 
-    response = _client.messages.create(
+    response = _get_client().messages.create(
         model="claude-sonnet-4-6",
         max_tokens=300,
         system=[
