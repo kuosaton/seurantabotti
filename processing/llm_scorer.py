@@ -1,17 +1,14 @@
 from __future__ import annotations
 
+import functools
 import json
 
 import anthropic
 
-_client: anthropic.Anthropic | None = None
 
-
+@functools.lru_cache(maxsize=1)
 def _get_client() -> anthropic.Anthropic:
-    global _client
-    if _client is None:
-        _client = anthropic.Anthropic()
-    return _client
+    return anthropic.Anthropic()
 
 
 SYSTEM_PROMPT = """\

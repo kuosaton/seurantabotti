@@ -78,7 +78,7 @@ def test_cmd_daily_warns_if_jakelu_fetch_fails_and_drops_low_score(
     monkeypatch.setattr(main, "fetch_recent", lambda client, top: [proposal])
 
     def _raise_jakelu(*args, **kwargs):
-        raise RuntimeError("jakelu unavailable")
+        raise main.httpx.HTTPError("jakelu unavailable")
 
     monkeypatch.setattr(main, "proposal_has_recipient", _raise_jakelu)
     monkeypatch.setattr(

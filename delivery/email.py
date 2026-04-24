@@ -6,24 +6,20 @@ from datetime import date, datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+from config import COMMITTEE_DISPLAY_NAMES
+
+_SMTP_HOST = "smtp.gmail.com"
+_SMTP_PORT = 587
+
 
 def _fmt_date(d: date | datetime) -> str:
     return f"{d.day}.{d.month}.{d.year}"
 
 
-def send_email(
-    subject: str,
-    html_body: str,
-    text_body: str,
-    to: str | None = None,
-    smtp_host: str = "smtp.gmail.com",
-    smtp_port: int = 587,
-    smtp_user: str | None = None,
-    smtp_pass: str | None = None,
-) -> None:
-    to = os.environ.get("RECIPIENT_EMAIL", "") if to is None else to
-    smtp_user = os.environ.get("SMTP_USER", "") if smtp_user is None else smtp_user
-    smtp_pass = os.environ.get("SMTP_PASS", "") if smtp_pass is None else smtp_pass
+def send_email(subject: str, html_body: str, text_body: str) -> None:
+    to = os.environ.get("RECIPIENT_EMAIL", "")
+    smtp_user = os.environ.get("SMTP_USER", "")
+    smtp_pass = os.environ.get("SMTP_PASS", "")
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -32,7 +28,7 @@ def send_email(
     msg.attach(MIMEText(text_body, "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
+    with smtplib.SMTP(_SMTP_HOST, _SMTP_PORT) as server:
         server.starttls()
         server.login(smtp_user, smtp_pass)
         server.send_message(msg)
@@ -44,17 +40,10 @@ def send_email(
 
 
 def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
-    """
-    Build subject, HTML body, and plain-text body for the daily lausuntopalvelu digest.
-
-    Each item in `flagged` is a dict:
-      {"proposal": Proposal, "score": int, "rationale": str, "themes": list[str]}
-    """
     today = _fmt_date(date.today())
     count = len(flagged)
     subject = f"Uusia lausuntopyyntöjä, {today}"
 
-    # Plain text
     lines = [f"{count} uutta lausuntopyyntöä, jotka saattavat kiinnostaa Kuluttajaliittoa:\n"]
     for item in flagged:
         p = item["proposal"]
@@ -70,7 +59,6 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
         ]
     text_body = "\n".join(lines)
 
-    # HTML
     item_html = ""
     for item in flagged:
         p = item["proposal"]
@@ -110,25 +98,13 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
 # ---------------------------------------------------------------------------
 
 
-def build_weekly_digest(
+def _weekly_text_body(
     committee_items: dict[str, list[dict]],
     week_number: int,
+    total_flagged: int,
     total_scored: int,
     total_logged: int,
-) -> tuple[str, str, str]:
-    """
-    Build subject, HTML, and plain text for the Friday weekly committee digest.
-
-    `committee_items` maps committee key → list of flagged item dicts:
-      {"eduskuntatunnus": str, "title": str, "date": str,
-       "score": int, "rationale": str, "themes": list[str], "url": str}
-    """
-    from config import COMMITTEE_DISPLAY_NAMES
-
-    subject = f"Seurantabotti viikkokatsaus, vko {week_number}"
-    total_flagged = sum(len(v) for v in committee_items.values())
-
-    # Plain text
+) -> str:
     lines = [f"Viikkokatsaus, vko {week_number}\n"]
     for key, items in committee_items.items():
         name = COMMITTEE_DISPLAY_NAMES.get(key, key)
@@ -150,9 +126,10 @@ def build_weekly_digest(
         f"Nostettu: {total_flagged}",
         f"Lokitettu (pistemäärä 4–6): {total_logged}",
     ]
-    text_body = "\n".join(lines)
+    return "\n".join(lines)
 
-    # HTML — build per-committee sections
+
+def _weekly_html_sections(committee_items: dict[str, list[dict]]) -> str:
     sections_html = ""
     for key, items in committee_items.items():
         name = COMMITTEE_DISPLAY_NAMES.get(key, key)
@@ -174,7 +151,21 @@ def build_weekly_digest(
         sections_html += f"""
         <h3 style="color:#1a56a0;border-bottom:1px solid #ddd;padding-bottom:6px;">{name}</h3>
         {items_html}"""
+    return sections_html
 
+
+def build_weekly_digest(
+    committee_items: dict[str, list[dict]],
+    week_number: int,
+    total_scored: int,
+    total_logged: int,
+) -> tuple[str, str, str]:
+    subject = f"Seurantabotti viikkokatsaus, vko {week_number}"
+    total_flagged = sum(len(v) for v in committee_items.values())
+    text_body = _weekly_text_body(
+        committee_items, week_number, total_flagged, total_scored, total_logged
+    )
+    sections_html = _weekly_html_sections(committee_items)
     html_body = f"""<!DOCTYPE html>
 <html lang="fi">
 <head><meta charset="utf-8"><title>{subject}</title></head>
@@ -190,5 +181,4 @@ def build_weekly_digest(
   <p style="font-size:11px;color:#aaa;">Seurantabotti</p>
 </body>
 </html>"""
-
     return subject, html_body, text_body

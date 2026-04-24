@@ -109,13 +109,15 @@ def test_llm_scorer_client_is_created_lazily_once(monkeypatch) -> None:
             calls["created"] += 1
             self.messages = SimpleNamespace(create=fake_create)
 
-    monkeypatch.setattr(llm_scorer, "_client", None)
+    llm_scorer._get_client.cache_clear()
     monkeypatch.setattr(llm_scorer.anthropic, "Anthropic", FakeAnthropicClient)
 
-    llm_scorer.score_item("A", "B", "src", {"recent_statements": []})
-    llm_scorer.score_item("A2", "B2", "src", {"recent_statements": []})
-
-    assert calls["created"] == 1
+    try:
+        llm_scorer.score_item("A", "B", "src", {"recent_statements": []})
+        llm_scorer.score_item("A2", "B2", "src", {"recent_statements": []})
+        assert calls["created"] == 1
+    finally:
+        llm_scorer._get_client.cache_clear()
 
 
 def test_send_email_reads_env_defaults_at_call_time(monkeypatch) -> None:

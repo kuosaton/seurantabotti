@@ -31,17 +31,13 @@ def test_send_email_uses_smtp_flow(monkeypatch) -> None:
             calls["to"] = msg["To"]
 
     monkeypatch.setattr(email_mod.smtplib, "SMTP", FakeSMTP)
+    monkeypatch.setattr(email_mod, "_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr(email_mod, "_SMTP_PORT", 2525)
+    monkeypatch.setenv("RECIPIENT_EMAIL", "vastaanottaja@example.com")
+    monkeypatch.setenv("SMTP_USER", "lahettaja@example.com")
+    monkeypatch.setenv("SMTP_PASS", "salasana")
 
-    email_mod.send_email(
-        subject="Testisubject",
-        html_body="<p>Hei</p>",
-        text_body="Hei",
-        to="vastaanottaja@example.com",
-        smtp_host="smtp.example.com",
-        smtp_port=2525,
-        smtp_user="lahettaja@example.com",
-        smtp_pass="salasana",
-    )
+    email_mod.send_email(subject="Testisubject", html_body="<p>Hei</p>", text_body="Hei")
 
     assert calls["host"] == "smtp.example.com"
     assert calls["port"] == 2525

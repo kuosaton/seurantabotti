@@ -30,7 +30,7 @@ def test_score_item_includes_jakelu_signal(monkeypatch) -> None:
         )
 
     fake_client = SimpleNamespace(messages=SimpleNamespace(create=fake_create))
-    monkeypatch.setattr(llm_scorer, "_client", fake_client)
+    monkeypatch.setattr(llm_scorer, "_get_client", lambda: fake_client)
 
     result = llm_scorer.score_item(
         title="Testiotsikko",

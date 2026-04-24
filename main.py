@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import date as date_type
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ from dotenv import load_dotenv
 
 import config
 from clients.kuluttajaliitto import build_context, fetch_statements
-from clients.lausuntopalvelu import fetch_recent, proposal_has_recipient
+from clients.lausuntopalvelu import Proposal, fetch_recent, proposal_has_recipient
 from delivery.email import build_daily_digest, send_email
 from processing.llm_scorer import score_item
 
@@ -83,6 +84,72 @@ def cmd_update_context() -> None:
     print(f"Saved {len(statements)} statements to {config.CONTEXT_PATH}")
 
 
+def _score_proposal(client: httpx.Client, proposal: Proposal, ctx: dict) -> dict | None:
+    in_jakelu = False
+    try:
+        in_jakelu = proposal_has_recipient(client, proposal.id, "Kuluttajaliitto ry")
+    except httpx.HTTPError as exc:
+        print(f"  [WARN] could not read Jakelu for {proposal.id}: {exc}", file=sys.stderr)
+
+    try:
+        result = score_item(
+            proposal.title,
+            proposal.abstract,
+            "lausuntopalvelu",
+            ctx,
+            signals={"jakelu_kuluttajaliitto": in_jakelu},
+        )
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        print(f"  [ERROR] scoring failed for {proposal.id}: {exc}", file=sys.stderr)
+        return None
+
+    if in_jakelu and result["score"] < 10:
+        result["score"] += 1
+        base = (result.get("rationale") or "").strip()
+        result["rationale"] = f"{base} Jakelulistalla on Kuluttajaliitto ry, mikä nostaa relevanssia.".strip()
+
+    result["jakelu_kuluttajaliitto"] = in_jakelu
+    return result
+
+
+def _record_result(p: Proposal, result: dict, notified: bool, seen: dict) -> None:
+    now = datetime.now(UTC).isoformat()
+    seen[p.id] = {
+        "first_seen": now,
+        "title": p.title,
+        "score": result["score"],
+        "notified": notified,
+        "notified_at": now if notified else None,
+    }
+    _append_log(
+        {
+            "timestamp": now,
+            "source": "lausuntopalvelu",
+            "id": p.id,
+            "title": p.title,
+            "score": result["score"],
+            "rationale": result.get("rationale", ""),
+            "themes": result.get("themes", []),
+            "jakelu_kuluttajaliitto": result["jakelu_kuluttajaliitto"],
+            "notified": notified,
+        }
+    )
+
+
+def _deliver_digest(flagged: list[dict], dry_run: bool) -> None:
+    print(f"\n{len(flagged)} item(s) above threshold:")
+    for item in flagged:
+        print(f"  [{item['score']}/10] {item['proposal'].title[:70]}")
+    subject, html_body, text_body = build_daily_digest(flagged)
+    if dry_run:
+        print("\n--- DRY RUN: would send email ---")
+        print(f"Subject: {subject}")
+        print(text_body)
+    else:
+        send_email(subject=subject, html_body=html_body, text_body=text_body)
+        print(f"Email sent to {os.environ.get('RECIPIENT_EMAIL', '?')}")
+
+
 def cmd_daily(dry_run: bool) -> None:
     ctx = _load_context()
     if not ctx["recent_statements"]:
@@ -111,59 +178,15 @@ def cmd_daily(dry_run: bool) -> None:
 
     with httpx.Client() as client:
         for p in new_proposals:
-            in_kuluttajaliitto_jakelu = False
-            try:
-                in_kuluttajaliitto_jakelu = proposal_has_recipient(
-                    client,
-                    p.id,
-                    "Kuluttajaliitto ry",
-                )
-            except Exception as exc:
-                print(f"  [WARN] could not read Jakelu for {p.id}: {exc}", file=sys.stderr)
-
-            try:
-                result = score_item(
-                    p.title,
-                    p.abstract,
-                    "lausuntopalvelu",
-                    ctx,
-                    signals={"jakelu_kuluttajaliitto": in_kuluttajaliitto_jakelu},
-                )
-            except Exception as exc:
-                print(f"  [ERROR] scoring failed for {p.id}: {exc}", file=sys.stderr)
+            result = _score_proposal(client, p, ctx)
+            if result is None:
                 continue
 
             score = result["score"]
-            if in_kuluttajaliitto_jakelu and score < 10:
-                score += 1
-                result["score"] = score
-                base_rationale = (result.get("rationale") or "").strip()
-                extra = "Jakelulistalla on Kuluttajaliitto ry, mikä nostaa relevanssia."
-                result["rationale"] = f"{base_rationale} {extra}".strip()
-
+            in_jakelu = result["jakelu_kuluttajaliitto"]
             notified = score >= config.NOTIFY_THRESHOLD and not dry_run
 
-            seen[p.id] = {
-                "first_seen": datetime.now(UTC).isoformat(),
-                "title": p.title,
-                "score": score,
-                "notified": notified,
-                "notified_at": datetime.now(UTC).isoformat() if notified else None,
-            }
-
-            _append_log(
-                {
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "source": "lausuntopalvelu",
-                    "id": p.id,
-                    "title": p.title,
-                    "score": score,
-                    "rationale": result.get("rationale", ""),
-                    "themes": result.get("themes", []),
-                    "jakelu_kuluttajaliitto": in_kuluttajaliitto_jakelu,
-                    "notified": notified,
-                }
-            )
+            _record_result(p, result, notified, seen)
 
             if score >= config.NOTIFY_THRESHOLD:
                 flagged.append({"proposal": p, **result})
@@ -176,7 +199,7 @@ def cmd_daily(dry_run: bool) -> None:
                         "score": score,
                         "rationale": result.get("rationale", ""),
                         "themes": result.get("themes", []),
-                        "jakelu_kuluttajaliitto": in_kuluttajaliitto_jakelu,
+                        "jakelu_kuluttajaliitto": in_jakelu,
                         "deadline": p.deadline.date().isoformat() if p.deadline else None,
                         "organization": p.organization_name,
                         "url": p.url,
@@ -194,27 +217,15 @@ def cmd_daily(dry_run: bool) -> None:
         print(f"No items above notify threshold. Logged {total_logged} borderline items.")
         return
 
-    print(f"\n{len(flagged)} item(s) above threshold:")
-    for item in flagged:
-        print(f"  [{item['score']}/10] {item['proposal'].title[:70]}")
-
-    subject, html_body, text_body = build_daily_digest(flagged)
-
-    if dry_run:
-        print("\n--- DRY RUN: would send email ---")
-        print(f"Subject: {subject}")
-        print(text_body)
-    else:
-        send_email(subject=subject, html_body=html_body, text_body=text_body)
-        print(f"Email sent to {__import__('os').environ.get('RECIPIENT_EMAIL','?')}")
+    _deliver_digest(flagged, dry_run)
 
 
-def cmd_weekly(dry_run: bool) -> None:
+def cmd_weekly(dry_run: bool) -> None:  # pylint: disable=unused-argument
     print("Weekly committee digest is not yet implemented (Sprint 2).", file=sys.stderr)
     sys.exit(1)
 
 
-def cmd_midweek(dry_run: bool) -> None:
+def cmd_midweek(dry_run: bool) -> None:  # pylint: disable=unused-argument
     print("Midweek committee check is not yet implemented (Sprint 2).", file=sys.stderr)
     sys.exit(1)
 

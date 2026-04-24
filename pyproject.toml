@@ -38,19 +38,11 @@ branch = true
 [tool.pylint.main]
 py-version = "3.12"
 ignore = [".venv", "__pycache__"]
+ignore-paths = ["^tests/.*", "^scripts/.*"]
 
 [tool.pylint.messages_control]
 disable = [
     "line-too-long",
-    "wrong-import-position",
-    "import-outside-toplevel",
-    "too-many-locals",
-    "too-many-branches",
-    "too-many-statements",
-    "too-many-arguments",
-    "too-many-positional-arguments",
-    "broad-exception-caught",
-    "unused-argument",
     "import-error",
     "no-name-in-module",
     "missing-module-docstring",
