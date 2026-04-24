@@ -17,7 +17,7 @@ For each new proposal the bot:
 
 ## Setup
 
-**Prerequisites:** [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Python 3.12](https://docs.astral.sh/uv/guides/install-python/).
+**Prerequisites:** [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Python 3.14](https://docs.astral.sh/uv/guides/install-python/).
 
 **1. Install dependencies:**
 

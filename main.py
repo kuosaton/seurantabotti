@@ -475,7 +475,7 @@ def cmd_interactive() -> None:
     while True:
         try:
             choice = input("> ").strip()
-        except (EOFError, KeyboardInterrupt):
+        except EOFError, KeyboardInterrupt:
             print()
             break
 
