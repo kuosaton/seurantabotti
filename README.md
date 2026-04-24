@@ -138,6 +138,10 @@ In addition to lausuntopalvelu.fi, Kuluttajaliitto needs to track proceedings in
 
 The email formatting and sending infrastructure is already in place. The `--daily` command builds a full HTML + plain-text digest and can send it via Gmail SMTP when credentials are configured. Completing this for production use is a v2.0 milestone.
 
+## About the development process
+
+This project was developed using [Claude Code](https://claude.ai/code) as the primary coding agent. It was built as a rapid prototype for Kuluttajaliitto use, with a deliberate focus on delivering something working quickly while still maintaining reliability, security, and test coverage. The human developer directed the process: defining requirements, making architectural and scoping decisions, reviewing all changes, and managing version control, as well as handling toolchain setup: migrating to uv and ruff, pinning dependencies to latest versions with a 7-day expiry window to limit supply chain exposure, and hardening GitHub Actions.
+
 ## Development
 
 ```bash
