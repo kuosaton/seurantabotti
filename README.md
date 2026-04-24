@@ -17,13 +17,9 @@ For each new proposal the bot:
 
 ## Setup
 
-**1. Install uv** (if not already installed):
+**Prerequisites:** [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Python 3.12](https://docs.astral.sh/uv/guides/install-python/).
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-**2. Install dependencies:**
+**1. Install dependencies:**
 
 ```bash
 uv sync               # runtime dependencies only
