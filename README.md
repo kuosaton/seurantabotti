@@ -10,9 +10,9 @@ The bot is designed to identify proposals that are relevant to Kuluttajaliitto's
 
 For each new proposal the bot:
 
-1. **Skips it if Kuluttajaliitto is on the jakelu (distribution) list.** Being on jakelu means the requesting organisation has already identified Kuluttajaliitto as a relevant party and will contact them directly. These proposals don't need to be surfaced — the official process handles them.
+1. **Skips it if Kuluttajaliitto is on the jakelu (distribution) list.** Being on jakelu means the requesting organisation has already identified Kuluttajaliitto as a relevant party and will contact them directly. These proposals don't need to be surfaced: the official process handles them.
 2. **Skips it if Kuluttajaliitto has already submitted a response.** No point flagging a proposal that has already been acted on.
-3. **Scores the remaining proposals 0–10** using Claude, comparing the proposal title and description against Kuluttajaliitto's recent statements and areas of focus.
+3. **Scores the remaining proposals on a scale from 0 to 10** using Claude Sonnet 4.6, comparing the proposal title and description against Kuluttajaliitto's recent statements and areas of focus.
 4. **Notifies on high-scoring proposals** (score ≥ 6) by sending a formatted email digest and saving the item to `state/nostetut.json`.
 
 ## Setup
@@ -138,10 +138,6 @@ In addition to lausuntopalvelu.fi, Kuluttajaliitto needs to track proceedings in
 
 The email formatting and sending infrastructure is already in place. The `--daily` command builds a full HTML + plain-text digest and can send it via Gmail SMTP when credentials are configured. Completing this for production use is a v2.0 milestone.
 
-## About the development process
-
-This project was developed using [Claude Code](https://claude.ai/code) as the primary coding agent. It was built as a rapid prototype for Kuluttajaliitto use, with a deliberate focus on delivering something working quickly while still maintaining reliability, security, and test coverage. The human developer directed the process: defining requirements, making architectural and scoping decisions, reviewing all changes, and managing version control, as well as handling toolchain setup: migrating to uv and ruff, pinning dependencies to latest versions with a 7-day expiry window to limit supply chain exposure, and hardening GitHub Actions.
-
 ## Development
 
 ```bash
@@ -161,3 +157,7 @@ make precommit-install
 make mutation
 make mutation-results
 ```
+
+## About the development process
+
+This project was developed using [Claude Code](https://claude.ai/code) as the primary coding agent. It was built as a rapid prototype for Kuluttajaliitto use, with a deliberate focus on delivering something working quickly while still maintaining reliability, security, and test coverage. The human developer directed the process: defining requirements, making architectural and scoping decisions, reviewing all changes, and managing version control, as well as handling toolchain setup: migrating to uv and ruff, pinning dependencies to latest versions with a 7-day expiry window to limit supply chain exposure, and hardening GitHub Actions.
