@@ -74,7 +74,7 @@ uv run python main.py --daily --dry-run
 # Refresh Kuluttajaliitto context from their website
 uv run python main.py --update-context
 
-# Review borderline items (score 4–6) from the last 7 days
+# Review borderline items (score 4–5) from the last 7 days
 uv run python main.py --review-logged
 uv run python main.py --review-logged --days 14
 
@@ -93,8 +93,8 @@ Each proposal is scored 0–10 by Claude against Kuluttajaliitto's recent statem
 
 | Score | Action                                          |
 | ----- | ----------------------------------------------- |
-| ≥ 7   | Email sent, item added to `state/nostetut.json` |
-| 4–6   | Logged to `state/score_log.jsonl`, no email     |
+| ≥ 6   | Email sent, item added to `state/nostetut.json` |
+| 4–5   | Logged to `state/score_log.jsonl`, no email     |
 | 0–3   | Dropped silently                                |
 
 If Kuluttajaliitto appears on the jakelu list, that proposal is skipped before scoring.

@@ -92,7 +92,7 @@ def _score_proposal(client: httpx.Client, proposal: Proposal, ctx: dict) -> dict
         print(f"  [WARN] could not read Jakelu for {proposal.id}: {exc}", file=sys.stderr)
 
     if in_jakelu:
-        print(f"  [SKIP JAKELU] {proposal.title[:70]}")
+        print(f"  [SKIP JAKELU] {proposal.title}")
         return {"_skip_reason": "jakelu", "jakelu_kuluttajaliitto": True}
 
     try:
@@ -134,7 +134,7 @@ def _record_result(p: Proposal, result: dict, notified: bool, seen: dict) -> Non
 def _deliver_digest(flagged: list[dict], dry_run: bool) -> None:
     print(f"\n{len(flagged)} item(s) above threshold:")
     for item in flagged:
-        print(f"  [{item['score']}/10] {item['proposal'].title[:70]}")
+        print(f"  [{item['score']}/10] {item['proposal'].title}")
     subject, html_body, text_body = build_daily_digest(flagged)
     if dry_run:
         print("\n--- DRY RUN: would send email ---")
@@ -221,9 +221,9 @@ def cmd_daily(dry_run: bool) -> None:
                 )
             elif score >= config.LOG_THRESHOLD:
                 total_logged += 1
-                print(f"  [LOG {score}/10] {p.title[:70]}")
+                print(f"  [LOG {score}/10] {p.title}")
             else:
-                print(f"  [DROP {score}/10] {p.title[:70]}")
+                print(f"  [DROP {score}/10] {p.title}")
 
     _save_json(config.SEEN_PROPOSALS_PATH, seen)
 
@@ -273,7 +273,7 @@ def cmd_review_logged(days: int = 7) -> None:
 
     def _print_entries(entries: list[dict]) -> None:
         for entry in entries:
-            print(f"[{entry['score']}/10] {entry['timestamp'][:10]}  {entry['title'][:70]}")
+            print(f"[{entry['score']}/10] {entry['timestamp'][:10]}  {entry['title']}")
             print(f"  {entry.get('rationale', '')}")
             print()
 
@@ -432,7 +432,7 @@ def main() -> None:
     parser.add_argument(
         "--review-logged",
         action="store_true",
-        help="Print borderline (score 4–6) items from the last 7 days",
+        help="Print borderline (score 4–5) items from the last 7 days",
     )
     parser.add_argument(
         "--days",

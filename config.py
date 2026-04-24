@@ -1,8 +1,8 @@
 from pathlib import Path
 
 # Scoring thresholds
-NOTIFY_THRESHOLD = 7  # score >= 7 → email
-LOG_THRESHOLD = 4  # score 4–6 → log only; score 0–3 → drop
+NOTIFY_THRESHOLD = 6  # score >= 6 → email
+LOG_THRESHOLD = 4  # score 4–5 → log only; score 0–3 → drop
 
 # How many proposals to fetch per daily run (sorted newest-first).
 # High enough to cover the full backlog on first run; deduplication handles the rest.

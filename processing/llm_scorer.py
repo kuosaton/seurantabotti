@@ -127,7 +127,7 @@ def score_item(
     )
 
     response = _get_client().messages.create(
-        model="claude-haiku-4-5",
+        model="claude-sonnet-4-6",
         max_tokens=300,
         timeout=45.0,
         system=[
