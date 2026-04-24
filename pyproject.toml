@@ -10,6 +10,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "hypothesis>=6.124.0",
+    "mutmut>=3.3.1",
     "pre-commit>=4.5.1",
     "pyright>=1.1.408",
     "pytest>=9.0.3",
@@ -19,6 +21,7 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py312"
@@ -41,4 +44,13 @@ include = ["main.py", "config.py", "clients", "delivery", "processing"]
 exclude = ["tests"]
 reportMissingTypeStubs = false
 strict = ["processing"]
+
+[tool.mutmut]
+paths_to_mutate = ["main.py", "processing/llm_scorer.py"]
+also_copy = ["clients", "delivery", "config.py", "processing"]
+tests_dir = ["tests"]
+runner = "uv run --extra dev pytest -q"
+do_not_mutate = [
+    "if __name__ == \"__main__\":"
+]
 

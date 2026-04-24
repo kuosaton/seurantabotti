@@ -124,4 +124,8 @@ make precommit
 
 # One-time install for git hooks (pre-commit + pre-push)
 make precommit-install
+
+# Mutation testing (heavier quality signal)
+make mutation
+make mutation-results
 ```

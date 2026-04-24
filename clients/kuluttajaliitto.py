@@ -27,14 +27,18 @@ def _strip(s: str | None) -> str:
     return unescape(re.sub(r"<[^>]+>", " ", s)).strip()
 
 
-def _fetch_tag_names(client: httpx.Client, tag_ids: list[int]) -> dict[int, str]:
+def _fetch_tag_names(
+    client: httpx.Client,
+    tag_ids: list[int],
+    per_page: int = 100,
+) -> dict[int, str]:
     if not tag_ids:
         return {}
     r = client.get(
         WP_TAGS_API,
         params={
             "include": ",".join(str(i) for i in tag_ids),
-            "per_page": 10,
+            "per_page": per_page,
             "_fields": "id,name",
         },
         timeout=20,
@@ -43,7 +47,7 @@ def _fetch_tag_names(client: httpx.Client, tag_ids: list[int]) -> dict[int, str]
     return {t["id"]: t["name"] for t in r.json()}
 
 
-def fetch_statements(client: httpx.Client, per_page: int = 10) -> list[Statement]:
+def fetch_statements(client: httpx.Client, per_page: int = 100) -> list[Statement]:
     r = client.get(
         WP_API,
         params={

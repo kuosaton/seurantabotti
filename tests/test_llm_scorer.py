@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from processing import llm_scorer
 
@@ -132,3 +135,68 @@ def test_parse_response_json_uses_first_complete_object_when_multiple() -> None:
     )
 
     assert parsed["score"] == 2
+
+
+_SAFE_TEXT = st.text(
+    alphabet=st.characters(blacklist_characters="{}"),
+    min_size=0,
+    max_size=40,
+)
+
+
+@settings(max_examples=120, deadline=None)
+@given(
+    case=st.fixed_dictionaries(
+        {
+            "score": st.integers(min_value=0, max_value=10),
+            "rationale": _SAFE_TEXT,
+            "themes": st.lists(_SAFE_TEXT, max_size=3),
+            "prefix": st.text(alphabet=st.characters(blacklist_characters="{}`"), max_size=20),
+            "suffix": st.text(alphabet=st.characters(blacklist_characters="{}`"), max_size=20),
+            "wrapper": st.sampled_from(["plain", "fenced", "prose"]),
+        }
+    )
+)
+def test_parse_response_json_property_fuzz_wrappers(case: dict[str, object]) -> None:
+    score = int(case["score"])
+    rationale = str(case["rationale"])
+    themes = [str(x) for x in case["themes"]]
+    prefix = str(case["prefix"])
+    suffix = str(case["suffix"])
+    wrapper = str(case["wrapper"])
+
+    payload = {"score": score, "rationale": rationale, "themes": themes}
+    payload_json = json.dumps(payload, ensure_ascii=False)
+
+    if wrapper == "plain":
+        raw = payload_json
+    elif wrapper == "fenced":
+        raw = f"```json\n{payload_json}\n```"
+    else:
+        raw = f"{prefix}{payload_json}{suffix}"
+
+    parsed = llm_scorer._parse_response_json(raw)
+    assert parsed["score"] == score
+    assert parsed["rationale"] == rationale
+    assert parsed["themes"] == themes
+
+
+@settings(max_examples=80, deadline=None)
+@given(
+    score=st.integers(min_value=0, max_value=10),
+    rationale=_SAFE_TEXT,
+    themes=st.lists(_SAFE_TEXT, max_size=3),
+)
+def test_parse_response_json_property_fuzz_empty_fence_then_json(
+    score: int,
+    rationale: str,
+    themes: list[str],
+) -> None:
+    payload = {"score": score, "rationale": rationale, "themes": themes}
+    payload_json = json.dumps(payload, ensure_ascii=False)
+    raw = f"```json\n\n```\n{payload_json}"
+
+    parsed = llm_scorer._parse_response_json(raw)
+    assert parsed["score"] == score
+    assert parsed["rationale"] == rationale
+    assert parsed["themes"] == themes

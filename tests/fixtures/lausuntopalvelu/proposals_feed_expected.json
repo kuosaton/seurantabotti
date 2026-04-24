@@ -1,0 +1,20 @@
+[
+  {
+    "id": "abc-123",
+    "title": "Otsikko 1",
+    "organization_name": "Ministerio A",
+    "abstract": "Kuvaus 1",
+    "deadline": "2026-05-01T00:00:00",
+    "published_on": "2026-04-21T10:56:55",
+    "url": "https://www.lausuntopalvelu.fi/FI/Proposal/Participation?proposalId=abc-123"
+  },
+  {
+    "id": "def-456",
+    "title": "Otsikko 2",
+    "organization_name": "Ministerio B",
+    "abstract": "Kuvaus 2",
+    "deadline": null,
+    "published_on": "2026-04-20T09:01:02",
+    "url": "https://www.lausuntopalvelu.fi/FI/Proposal/Participation?proposalId=def-456"
+  }
+]

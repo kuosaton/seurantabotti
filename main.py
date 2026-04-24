@@ -93,7 +93,7 @@ def _score_proposal(client: httpx.Client, proposal: Proposal, ctx: dict) -> dict
 
     if in_jakelu:
         print(f"  [SKIP JAKELU] {proposal.title[:70]}")
-        return None
+        return {"_skip_reason": "jakelu", "jakelu_kuluttajaliitto": True}
 
     try:
         result = score_item(proposal.title, proposal.abstract, "lausuntopalvelu", ctx)
@@ -178,6 +178,18 @@ def cmd_daily(dry_run: bool) -> None:
         for p in new_proposals:
             result = _score_proposal(client, p, ctx)
             if result is None:
+                continue
+
+            if result.get("_skip_reason") == "jakelu":
+                now = datetime.now(UTC).isoformat()
+                seen[p.id] = {
+                    "first_seen": now,
+                    "title": p.title,
+                    "score": 0,
+                    "notified": False,
+                    "notified_at": None,
+                    "status": "skipped_jakelu",
+                }
                 continue
 
             score = result["score"]

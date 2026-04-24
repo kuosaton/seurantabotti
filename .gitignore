@@ -45,6 +45,9 @@ coverage.xml
 state/
 context/
 
+# Mutation testing workspace
+mutants/
+
 # Local coverage exports
 coverage.json
 lcov.info

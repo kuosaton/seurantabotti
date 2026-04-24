@@ -1,4 +1,4 @@
-.PHONY: check format lint typecheck test quick-test precommit precommit-install
+.PHONY: check format lint typecheck test quick-test precommit precommit-install mutation mutation-results
 
 check: format lint typecheck test
 
@@ -30,3 +30,9 @@ precommit:
 
 precommit-install:
 	uv run --extra dev pre-commit install --hook-type pre-commit --hook-type pre-push
+
+mutation:
+	uv run --extra dev mutmut run
+
+mutation-results:
+	uv run --extra dev mutmut results

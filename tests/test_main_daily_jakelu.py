@@ -47,9 +47,10 @@ def test_cmd_daily_skips_when_kuluttajaliitto_already_on_jakelu(tmp_path, monkey
 
     monkeypatch.setattr(main, "fetch_recent", lambda client, top: [proposal])
 
-    captured_lookup = {}
+    captured_lookup = {"calls": 0}
 
     def fake_has_recipient(client, pid, name):
+        captured_lookup["calls"] += 1
         captured_lookup["pid"] = pid
         captured_lookup["name"] = name
         return True
@@ -62,11 +63,13 @@ def test_cmd_daily_skips_when_kuluttajaliitto_already_on_jakelu(tmp_path, monkey
     monkeypatch.setattr(main, "score_item", should_not_score)
 
     main.cmd_daily(dry_run=True)
+    main.cmd_daily(dry_run=True)
 
-    assert captured_lookup == {"pid": proposal.id, "name": "Kuluttajaliit"}
+    assert captured_lookup == {"calls": 1, "pid": proposal.id, "name": "Kuluttajaliit"}
 
     seen = json.loads(seen_path.read_text(encoding="utf-8"))
-    assert seen == {}
+    assert seen[proposal.id]["status"] == "skipped_jakelu"
+    assert seen[proposal.id]["notified"] is False
 
     log_lines = [
         line for line in score_log_path.read_text(encoding="utf-8").splitlines() if line.strip()

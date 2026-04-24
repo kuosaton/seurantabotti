@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices"
+      xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata">
+  <entry>
+    <content type="application/xml">
+      <m:properties>
+        <d:Id>abc-123</d:Id>
+        <d:Name>Otsikko 1</d:Name>
+        <d:Goals>&lt;p&gt;Kuvaus 1&lt;/p&gt;</d:Goals>
+        <d:Deadline>2026-05-01T00:00:00</d:Deadline>
+        <d:PublishedOn>2026-04-21T10:56:55.763</d:PublishedOn>
+        <d:OrganizationName>Ministerio A</d:OrganizationName>
+      </m:properties>
+    </content>
+  </entry>
+  <entry>
+    <content type="application/xml">
+      <m:properties>
+        <d:Id>def-456</d:Id>
+        <d:Name>Otsikko 2</d:Name>
+        <d:Goals>&lt;p&gt;Kuvaus 2&lt;/p&gt;</d:Goals>
+        <d:PublishedOn>2026-04-20T09:01:02.000Z</d:PublishedOn>
+        <d:OrganizationName>Ministerio B</d:OrganizationName>
+      </m:properties>
+    </content>
+  </entry>
+</feed>
