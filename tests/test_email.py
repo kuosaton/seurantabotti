@@ -65,13 +65,15 @@ def test_build_daily_digest_contains_key_fields() -> None:
 
     subject, html_body, text_body = email_mod.build_daily_digest(flagged)
     assert "Uusia lausuntopyyntöjä" in subject
-    assert "Asumista koskeva luonnos" in text_body
+    assert "pistemäärä 8" in text_body  # score range in header
+    assert "[8/10] Asumista koskeva luonnos" in text_body  # score on title line
+    assert "Relevanssi" not in text_body  # no longer a separate field
     assert "Julkaistu: 21.4.2026" in text_body
-    assert "Relevanssi: 8/10" in text_body
     assert "https://example.invalid/proposal/1" in text_body
     assert "8.5.2026" in text_body
-    assert "pv" in text_body  # days-remaining annotation present
+    assert "pv" in text_body
     assert "Teemat:    asuminen, kuluttajansuoja" in text_body
+    assert "─" in text_body  # separator present
     assert "Julkaistu" in html_body
     assert "Teemat: asuminen, kuluttajansuoja" in html_body
     assert "pv" in html_body

@@ -75,18 +75,25 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
     count = len(sorted_items)
     subject = f"Uusia lausuntopyyntöjä, {today}"
 
-    lines = [f"{count} uutta lausuntopyyntöä, jotka saattavat kiinnostaa Kuluttajaliittoa:\n"]
+    scores = [item["score"] for item in sorted_items]
+    score_range = (
+        f"pisteet {min(scores)}–{max(scores)}" if len(scores) > 1 else f"pistemäärä {scores[0]}"
+    )
+    lines = [
+        f"{count} uutta lausuntopyyntöä, jotka saattavat kiinnostaa Kuluttajaliittoa ({score_range}):\n"
+    ]
+    separator = "─" * 60
     for item in sorted_items:
         p = item["proposal"]
         published_str = _fmt_date(p.published_on) if getattr(p, "published_on", None) else "–"
         deadline_str = _deadline_display(p.deadline)
         themes = item.get("themes", [])
         entry = [
-            f"▸ {p.title}",
+            separator,
+            f"▸ [{item['score']}/10] {p.title}",
             f"   Pyytäjä:   {p.organization_name}",
             f"   Julkaistu: {published_str}",
             f"   Määräaika: {deadline_str}",
-            f"   Relevanssi: {item['score']}/10",
             f"   {item['rationale']}",
         ]
         if themes:

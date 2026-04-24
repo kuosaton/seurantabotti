@@ -51,3 +51,6 @@ mutants/
 # Local coverage exports
 coverage.json
 lcov.info
+
+# Personal notes
+todo.md
