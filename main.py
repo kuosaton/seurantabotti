@@ -113,6 +113,7 @@ def _record_result(p: Proposal, result: dict, notified: bool, seen: dict) -> Non
         "score": result["score"],
         "notified": notified,
         "notified_at": now if notified else None,
+        "published_on": p.published_on.isoformat(),
     }
     _append_log(
         {
@@ -125,6 +126,7 @@ def _record_result(p: Proposal, result: dict, notified: bool, seen: dict) -> Non
             "themes": result.get("themes", []),
             "jakelu_kuluttajaliitto": result["jakelu_kuluttajaliitto"],
             "notified": notified,
+            "published_on": p.published_on.isoformat(),
         }
     )
 
@@ -189,6 +191,7 @@ def cmd_daily(dry_run: bool) -> None:
                     "notified": False,
                     "notified_at": None,
                     "status": "skipped_jakelu",
+                    "published_on": p.published_on.isoformat(),
                 }
                 continue
 
@@ -210,6 +213,7 @@ def cmd_daily(dry_run: bool) -> None:
                         "rationale": result.get("rationale", ""),
                         "themes": result.get("themes", []),
                         "jakelu_kuluttajaliitto": in_jakelu,
+                        "published_on": p.published_on.isoformat(),
                         "deadline": p.deadline.date().isoformat() if p.deadline else None,
                         "organization": p.organization_name,
                         "url": p.url,
@@ -307,10 +311,17 @@ def cmd_preview_nostetut() -> None:
                 deadline = datetime(d.year, d.month, d.day)
             except ValueError:
                 pass
+        published_on = None
+        if e.get("published_on"):
+            try:
+                published_on = datetime.fromisoformat(e["published_on"])
+            except ValueError:
+                pass
         proposal = SimpleNamespace(
             title=e.get("title", ""),
             organization_name=e.get("organization") or "–",
             deadline=deadline,
+            published_on=published_on,
             url=e.get("url", ""),
         )
         flagged.append(

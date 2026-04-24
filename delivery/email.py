@@ -47,10 +47,12 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
     lines = [f"{count} uutta lausuntopyyntöä, jotka saattavat kiinnostaa Kuluttajaliittoa:\n"]
     for item in flagged:
         p = item["proposal"]
+        published_str = _fmt_date(p.published_on) if getattr(p, "published_on", None) else "–"
         deadline_str = _fmt_date(p.deadline) if p.deadline else "–"
         lines += [
             f"▸ {p.title}",
             f"   Pyytäjä:   {p.organization_name}",
+            f"   Julkaistu: {published_str}",
             f"   Määräaika: {deadline_str}",
             f"   Relevanssi: {item['score']}/10",
             f"   {item['rationale']}",
@@ -62,6 +64,7 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
     item_html = ""
     for item in flagged:
         p = item["proposal"]
+        published_str = _fmt_date(p.published_on) if getattr(p, "published_on", None) else "–"
         deadline_str = _fmt_date(p.deadline) if p.deadline else "–"
         themes = ", ".join(item.get("themes", []))
         item_html += f"""
@@ -71,6 +74,7 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
           </p>
           <table style="font-size:13px;color:#555;border-collapse:collapse;">
             <tr><td style="padding:2px 12px 2px 0;white-space:nowrap;">Pyytäjä</td><td>{p.organization_name}</td></tr>
+            <tr><td style="padding:2px 12px 2px 0;white-space:nowrap;">Julkaistu</td><td>{published_str}</td></tr>
             <tr><td style="padding:2px 12px 2px 0;white-space:nowrap;">Määräaika</td><td>{deadline_str}</td></tr>
             <tr><td style="padding:2px 12px 2px 0;white-space:nowrap;">Relevanssi</td><td>{item["score"]}/10</td></tr>
           </table>

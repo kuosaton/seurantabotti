@@ -136,6 +136,7 @@ def test_cmd_preview_nostetut_valid_deadline_branch(tmp_path, monkeypatch, capsy
                 {
                     "title": "Aihe",
                     "organization": "Org",
+                    "published_on": "2026-04-19T09:30:00",
                     "deadline": "2026-05-12",
                     "url": "https://example.invalid/p/2",
                     "score": 7,
@@ -149,6 +150,7 @@ def test_cmd_preview_nostetut_valid_deadline_branch(tmp_path, monkeypatch, capsy
 
     def _fake_build_daily_digest(flagged):
         assert flagged[0]["proposal"].deadline is not None
+        assert flagged[0]["proposal"].published_on is not None
         return "SUBJ2", "HTML", "TEXT2"
 
     monkeypatch.setattr(main, "build_daily_digest", _fake_build_daily_digest)

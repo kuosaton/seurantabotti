@@ -53,6 +53,7 @@ def test_build_daily_digest_contains_key_fields() -> None:
             "proposal": SimpleNamespace(
                 title="Asumista koskeva luonnos",
                 organization_name="Ympäristöministeriö",
+                published_on=datetime(2026, 4, 21),
                 deadline=datetime(2026, 5, 8),
                 url="https://example.invalid/proposal/1",
             ),
@@ -65,8 +66,10 @@ def test_build_daily_digest_contains_key_fields() -> None:
     subject, html_body, text_body = email_mod.build_daily_digest(flagged)
     assert "Uusia lausuntopyyntöjä" in subject
     assert "Asumista koskeva luonnos" in text_body
+    assert "Julkaistu: 21.4.2026" in text_body
     assert "Relevanssi: 8/10" in text_body
     assert "https://example.invalid/proposal/1" in text_body
+    assert "Julkaistu" in html_body
     assert "Teemat: asuminen, kuluttajansuoja" in html_body
 
 
