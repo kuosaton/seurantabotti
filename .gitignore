@@ -209,7 +209,6 @@ __marimo__/
 # Runtime state
 state/
 context/
-nostetut_archive.json
 coverage.json
 lcov.info
 
