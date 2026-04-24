@@ -2,6 +2,19 @@
 
 Monitors [lausuntopalvelu.fi](https://www.lausuntopalvelu.fi) for new consultation proposals relevant to Kuluttajaliitto, scores them with Claude, and sends an email digest for high-scoring items.
 
+Lausuntopalvelu publishes hundreds of new proposals every month. Manually reviewing them all to find the ones worth responding to is time-consuming. Seurantabotti cuts through this by automatically filtering and scoring proposals, so only the most relevant ones reach your inbox.
+
+## How it works
+
+The bot is designed to identify proposals that are relevant to Kuluttajaliitto's mandate but that Kuluttajaliitto has not already been drawn into through official channels.
+
+For each new proposal the bot:
+
+1. **Skips it if Kuluttajaliitto is on the jakelu (distribution) list.** Being on jakelu means the requesting organisation has already identified Kuluttajaliitto as a relevant party and will contact them directly. These proposals don't need to be surfaced — the official process handles them.
+2. **Skips it if Kuluttajaliitto has already submitted a response.** No point flagging a proposal that has already been acted on.
+3. **Scores the remaining proposals 0–10** using Claude, comparing the proposal title and description against Kuluttajaliitto's recent statements and areas of focus.
+4. **Notifies on high-scoring proposals** (score ≥ 6) by sending a formatted email digest and saving the item to `state/nostetut.json`.
+
 ## Setup
 
 **1. Install uv** (if not already installed):
@@ -102,7 +115,7 @@ Each proposal is scored 0–10 by Claude against Kuluttajaliitto's recent statem
 | 4–5   | Logged to `state/score_log.jsonl`, no email     |
 | 0–3   | Dropped silently                                |
 
-If Kuluttajaliitto appears on the jakelu list, that proposal is skipped before scoring.
+Proposals where Kuluttajaliitto is on the jakelu list, or where Kuluttajaliitto has already submitted a response, are skipped before scoring.
 
 ## State files
 
