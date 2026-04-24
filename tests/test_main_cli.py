@@ -23,11 +23,173 @@ def test_main_dispatches_preview(monkeypatch) -> None:
     assert called["preview"] is True
 
 
-def test_main_without_flags_exits(monkeypatch) -> None:
+def test_main_without_flags_launches_interactive(monkeypatch) -> None:
     monkeypatch.setattr("sys.argv", ["main.py"])
-    with pytest.raises(SystemExit) as exc:
-        main.main()
-    assert exc.value.code == 1
+    # Should not raise; interactive mode auto-exits via fixture returning "0"
+    main.main()
+
+
+def test_interactive_menu_choice_daily(monkeypatch) -> None:
+    called = {"daily": False}
+
+    def mock_daily(dry_run):
+        called["daily"] = True
+
+    # Simulate choosing "1" (daily check) then "0" (exit)
+    inputs = ["1", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        val = next(input_iter)
+        if prompt.strip() == ">":
+            return val
+        return "y"
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr(main, "cmd_daily", mock_daily)
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    main.main()
+    assert called["daily"] is True
+
+
+def test_interactive_menu_choice_daily_dry_run(monkeypatch) -> None:
+    called = {"daily_dry_run": False}
+
+    def mock_daily(dry_run):
+        if dry_run:
+            called["daily_dry_run"] = True
+
+    # Simulate choosing "2" (daily dry run) then "0" (exit)
+    inputs = ["2", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        val = next(input_iter)
+        if prompt.strip() == ">":
+            return val
+        return "y"
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr(main, "cmd_daily", mock_daily)
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    main.main()
+    assert called["daily_dry_run"] is True
+
+
+def test_interactive_menu_choice_update_context(monkeypatch) -> None:
+    called = {"update_context": False}
+
+    def mock_update():
+        called["update_context"] = True
+
+    # Simulate choosing "3" (update context) then "0" (exit)
+    inputs = ["3", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        val = next(input_iter)
+        if prompt.strip() == ">":
+            return val
+        return "y"
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr(main, "cmd_update_context", mock_update)
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    main.main()
+    assert called["update_context"] is True
+
+
+def test_interactive_menu_choice_review_logged(monkeypatch) -> None:
+    called = {"review_logged": False}
+
+    def mock_review(days):
+        called["review_logged"] = True
+
+    # Simulate choosing "4" (review 7 days) then "0" (exit)
+    inputs = ["4", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        val = next(input_iter)
+        if prompt.strip() == ">":
+            return val
+        return "y"
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr(main, "cmd_review_logged", mock_review)
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    main.main()
+    assert called["review_logged"] is True
+
+
+def test_interactive_menu_choice_preview_nostetut(monkeypatch) -> None:
+    called = {"preview": False}
+
+    def mock_preview():
+        called["preview"] = True
+
+    # Simulate choosing "6" (preview nostetut) then "0" (exit)
+    inputs = ["6", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        val = next(input_iter)
+        if prompt.strip() == ">":
+            return val
+        return "y"
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr(main, "cmd_preview_nostetut", mock_preview)
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    main.main()
+    assert called["preview"] is True
+
+
+def test_interactive_menu_choice_reset_state(monkeypatch) -> None:
+    called = {"reset": False}
+
+    def mock_reset():
+        called["reset"] = True
+
+    # Simulate choosing "7" (reset state) then "0" (exit)
+    inputs = ["7", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        val = next(input_iter)
+        if prompt.strip() == ">":
+            return val
+        return "y"
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr(main, "cmd_reset_state", mock_reset)
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    main.main()
+    assert called["reset"] is True
+
+
+def test_interactive_menu_invalid_choice(monkeypatch) -> None:
+    # Simulate choosing an invalid option, then "0" (exit)
+    inputs = ["99", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        val = next(input_iter)
+        if prompt.strip() == ">":
+            return val
+        return "y"
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    # Should not raise, just print error and continue
+    main.main()
 
 
 def test_unimplemented_commands_exit() -> None:

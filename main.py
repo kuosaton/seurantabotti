@@ -336,6 +336,60 @@ def cmd_reset_state() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Interactive UI
+# ---------------------------------------------------------------------------
+
+_MENU = """
+Seurantabotti
+─────────────────────────────────────
+1  Daily check
+2  Daily check (dry run)
+3  Update Kuluttajaliitto context
+4  Review logged items (7 days)
+5  Review logged items (custom range)
+6  Preview nostetut
+7  Reset state
+0  Exit
+─────────────────────────────────────"""
+
+
+def cmd_interactive() -> None:
+    print(_MENU)
+    while True:
+        try:
+            choice = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+
+        if choice == "0":
+            break
+        elif choice == "1":
+            cmd_daily(dry_run=False)
+        elif choice == "2":
+            cmd_daily(dry_run=True)
+        elif choice == "3":
+            cmd_update_context()
+        elif choice == "4":
+            cmd_review_logged(days=7)
+        elif choice == "5":
+            raw = input("Days to look back: ").strip()
+            try:
+                cmd_review_logged(days=int(raw))
+            except ValueError:
+                print(f"Invalid number: {raw!r}")
+        elif choice == "6":
+            cmd_preview_nostetut()
+        elif choice == "7":
+            cmd_reset_state()
+        else:
+            print(f"Unknown option: {choice!r}")
+            continue
+
+        print(_MENU)
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -380,6 +434,11 @@ def main() -> None:
         action="store_true",
         help="Erase all state files and start fresh",
     )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Launch interactive menu",
+    )
     args = parser.parse_args()
 
     if not any(
@@ -391,10 +450,11 @@ def main() -> None:
             args.review_logged,
             args.preview_nostetut,
             args.reset_state,
+            args.interactive,
         ]
     ):
-        parser.print_help()
-        sys.exit(1)
+        cmd_interactive()
+        return
 
     if args.update_context:
         cmd_update_context()
@@ -416,6 +476,9 @@ def main() -> None:
 
     if args.reset_state:
         cmd_reset_state()
+
+    if args.interactive:
+        cmd_interactive()
 
 
 if __name__ == "__main__":

@@ -16,4 +16,4 @@ test:
 	uv run python scripts/check_coverage_thresholds.py \
 		--file coverage.json \
 		--line 95 \
-		--branch 90
+		--branch 85

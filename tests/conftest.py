@@ -5,4 +5,7 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def auto_confirm(monkeypatch):
-    monkeypatch.setattr("builtins.input", lambda _: "y")
+    def _input(prompt):
+        return "0" if prompt.strip() == ">" else "y"
+
+    monkeypatch.setattr("builtins.input", _input)
