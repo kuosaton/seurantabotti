@@ -25,12 +25,12 @@ cp .env.example .env
 
 Edit `.env` with your values:
 
-| Variable | Description |
-|---|---|
-| `ANTHROPIC_API_KEY` | Anthropic API key |
-| `SMTP_USER` | Gmail address used to send email |
-| `SMTP_PASS` | Gmail app password |
-| `RECIPIENT_EMAIL` | Address to deliver digests to |
+| Variable            | Description                      |
+| ------------------- | -------------------------------- |
+| `ANTHROPIC_API_KEY` | Anthropic API key                |
+| `SMTP_USER`         | Gmail address used to send email |
+| `SMTP_PASS`         | Gmail app password               |
+| `RECIPIENT_EMAIL`   | Address to deliver digests to    |
 
 **4. Seed the Kuluttajaliitto context** (required before the first daily run):
 
@@ -64,11 +64,11 @@ uv run python main.py --preview-nostetut
 
 Each proposal is scored 0–10 by Claude against Kuluttajaliitto's recent statements and mandate:
 
-| Score | Action |
-|---|---|
-| ≥ 7 | Email sent, item added to `state/nostetut.json` |
-| 4–6 | Logged to `state/score_log.jsonl`, no email |
-| 0–3 | Dropped silently |
+| Score | Action                                          |
+| ----- | ----------------------------------------------- |
+| ≥ 7   | Email sent, item added to `state/nostetut.json` |
+| 4–6   | Logged to `state/score_log.jsonl`, no email     |
+| 0–3   | Dropped silently                                |
 
 Being on Kuluttajaliitto's jakelu list adds +1 to the score.
 
@@ -76,12 +76,12 @@ Being on Kuluttajaliitto's jakelu list adds +1 to the score.
 
 All state lives under `state/`:
 
-| File | Contents |
-|---|---|
+| File                  | Contents                                    |
+| --------------------- | ------------------------------------------- |
 | `seen_proposals.json` | Proposals already processed (deduplication) |
-| `score_log.jsonl` | Full scoring history |
-| `nostetut.json` | Items that crossed the notify threshold |
-| `seen_documents.json` | Reserved for document-level deduplication |
+| `score_log.jsonl`     | Full scoring history                        |
+| `nostetut.json`       | Items that crossed the notify threshold     |
+| `seen_documents.json` | Reserved for document-level deduplication   |
 
 ## Development
 
