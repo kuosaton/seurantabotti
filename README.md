@@ -40,6 +40,30 @@ uv run python main.py --update-context
 
 ## Running the bot
 
+**Interactive menu:**
+
+```bash
+uv run python main.py
+```
+
+Launches an interactive menu for easy access to all commands. Choose from numbered options:
+
+```
+Seurantabotti
+─────────────────────────────────────
+1  Daily check
+2  Daily check (dry run)
+3  Update Kuluttajaliitto context
+4  Review logged items (7 days)
+5  Review logged items (custom range)
+6  Preview nostetut
+7  Reset state
+0  Exit
+─────────────────────────────────────
+```
+
+**Command-line interface:**
+
 ```bash
 # Daily lausuntopalvelu check — scores new proposals, sends email if threshold met
 uv run python main.py --daily
