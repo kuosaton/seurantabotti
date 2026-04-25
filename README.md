@@ -4,7 +4,7 @@
 
 Helps [Kuluttajaliitto](https://www.kuluttajaliitto.fi/) (The Consumers’ Union of Finland) keep up with [lausuntopalvelu.fi](https://www.lausuntopalvelu.fi), the Finnish public administration's portal for consulting the public on draft proposals and decisions.
 
-Lausuntopalvelu publishes hundreds of new requests for comment (lausuntopyynnöt) every month, and manually reviewing them all to spot the ones worth responding to is time-consuming. Seurantabotti scores them with Claude and emails only the most relevant ones to your inbox.
+Lausuntopalvelu publishes hundreds of new requests for comment (lausuntopyyntö) every month, and manually reviewing them all to spot the ones worth responding to is time-consuming. Seurantabotti scores them with Claude and emails only the most relevant ones to your inbox.
 
 ## How it works
 
