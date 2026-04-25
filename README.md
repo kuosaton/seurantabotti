@@ -21,6 +21,13 @@ For new proposals, the bot:
 4. **Flags high-scoring proposals for review** (score ≥ 6).
 5. **Notifies designated recipients** of new flagged proposals via an email digest (upcoming feature).
 
+## Data sources
+
+All data comes from publicly accessible sources:
+
+- **[lausuntopalvelu.fi Open API](https://www.lausuntopalvelu.fi/api/v1/Lausuntopalvelu.svc)**: the source of the proposals being assessed. New requests for comment are fetched via the site's public OData/Atom feed; each proposal's distribution list and prior responses are read from its public participation page.
+- **[kuluttajaliitto.fi WordPress API](https://www.kuluttajaliitto.fi/wp-json/)**: the source of the relevance context. Kuluttajaliitto's published statements are pulled from the site's public WordPress REST API and used as the corpus the scoring model compares new proposals against.
+
 ## Scoring
 
 Each proposal is scored on scale from 0 to 10 based on Kuluttajaliitto's previously published statements and areas of focus by the large language model [Claude Haiku 4.5](https://www.anthropic.com/news/claude-haiku-4-5). The model is given the following rubric:
