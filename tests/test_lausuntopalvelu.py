@@ -5,7 +5,7 @@ from unittest.mock import Mock
 from clients.lausuntopalvelu import get_participation_flags, proposal_has_recipient
 
 
-def test_proposal_has_recipient_from_jakelu_table() -> None:
+def test_proposal_has_recipient_from_distribution_table() -> None:
     html = """
     <html><body>
       <h5>Jakelu:</h5>
@@ -97,8 +97,8 @@ def test_get_participation_flags_detects_responded() -> None:
     client = Mock()
     client.get.return_value = response
 
-    in_jakelu, has_responded = get_participation_flags(client, "abc", "Kuluttajaliit")
-    assert in_jakelu is False
+    on_distribution_list, has_responded = get_participation_flags(client, "abc", "Kuluttajaliit")
+    assert on_distribution_list is False
     assert has_responded is True
 
 
@@ -109,8 +109,8 @@ def test_get_participation_flags_both_false_when_absent() -> None:
     client = Mock()
     client.get.return_value = response
 
-    in_jakelu, has_responded = get_participation_flags(client, "abc", "Kuluttajaliit")
-    assert in_jakelu is False
+    on_distribution_list, has_responded = get_participation_flags(client, "abc", "Kuluttajaliit")
+    assert on_distribution_list is False
     assert has_responded is False
 
 
@@ -122,8 +122,8 @@ def test_get_participation_flags_malformed_users_json_returns_false() -> None:
     client = Mock()
     client.get.return_value = response
 
-    in_jakelu, has_responded = get_participation_flags(client, "abc", "Kuluttajaliit")
-    assert in_jakelu is False
+    on_distribution_list, has_responded = get_participation_flags(client, "abc", "Kuluttajaliit")
+    assert on_distribution_list is False
     assert has_responded is False
 
 

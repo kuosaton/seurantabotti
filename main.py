@@ -43,8 +43,8 @@ def _append_log(entry: dict) -> None:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-def _append_nostetut(entry: dict) -> None:
-    path = config.NOSTETUT_PATH
+def _append_flagged(entry: dict) -> None:
+    path = config.FLAGGED_PATH
     items = (
         json.loads(path.read_text(encoding="utf-8"))
         if path.exists() and path.stat().st_size > 2
@@ -83,18 +83,20 @@ def cmd_update_context() -> None:
 
 
 def _score_proposal(client: httpx.Client, proposal: Proposal, ctx: dict) -> dict | None:
-    in_jakelu = False
+    on_distribution_list = False
     has_responded = False
     try:
-        in_jakelu, has_responded = get_participation_flags(client, proposal.id, "Kuluttajaliit")
+        on_distribution_list, has_responded = get_participation_flags(
+            client, proposal.id, "Kuluttajaliit"
+        )
     except httpx.HTTPError as exc:
         print(
             f"  [WARN] could not read participation info for {proposal.id}: {exc}",
             file=sys.stderr,
         )
 
-    if in_jakelu:
-        print(f"  [SKIP JAKELU] {proposal.title}")
+    if on_distribution_list:
+        print(f"  [SKIP DISTRIBUTION] {proposal.title}")
         return {"_skip_reason": "jakelu", "jakelu_kuluttajaliitto": True}
 
     if has_responded:
@@ -206,14 +208,14 @@ def cmd_daily(dry_run: bool) -> None:
                 continue
 
             score = result["score"]
-            in_jakelu = result["jakelu_kuluttajaliitto"]
+            on_distribution_list = result["jakelu_kuluttajaliitto"]
             notified = score >= config.NOTIFY_THRESHOLD and not dry_run
 
             _record_result(p, result, notified, seen)
 
             if score >= config.NOTIFY_THRESHOLD:
                 flagged.append({"proposal": p, **result})
-                _append_nostetut(
+                _append_flagged(
                     {
                         "timestamp": datetime.now(UTC).isoformat(),
                         "source": "lausuntopalvelu",
@@ -222,7 +224,7 @@ def cmd_daily(dry_run: bool) -> None:
                         "score": score,
                         "rationale": result.get("rationale", ""),
                         "themes": result.get("themes", []),
-                        "jakelu_kuluttajaliitto": in_jakelu,
+                        "jakelu_kuluttajaliitto": on_distribution_list,
                         "published_on": p.published_on.isoformat(),
                         "deadline": p.deadline.date().isoformat() if p.deadline else None,
                         "organization": p.organization_name,
@@ -292,24 +294,24 @@ def cmd_review_logged(days: int = 7) -> None:
         return
 
     if flagged:
-        print(f"--- NOSTETTU ({len(flagged)} kpl, pistemäärä ≥{config.NOTIFY_THRESHOLD}) ---\n")
+        print(f"--- FLAGGED ({len(flagged)} items, score ≥{config.NOTIFY_THRESHOLD}) ---\n")
         _print_entries(flagged)
 
     if borderline:
         print(
-            f"--- LOKITETTU ({len(borderline)} kpl, pistemäärä {config.LOG_THRESHOLD}–{config.NOTIFY_THRESHOLD - 1}) ---\n"
+            f"--- LOGGED ({len(borderline)} items, score {config.LOG_THRESHOLD}–{config.NOTIFY_THRESHOLD - 1}) ---\n"
         )
         _print_entries(borderline)
 
 
-def cmd_preview_nostetut() -> None:
-    if not config.NOSTETUT_PATH.exists() or config.NOSTETUT_PATH.stat().st_size <= 2:
-        print("nostetut.json is empty — nothing to preview.")
+def cmd_preview_flagged() -> None:
+    if not config.FLAGGED_PATH.exists() or config.FLAGGED_PATH.stat().st_size <= 2:
+        print("No flagged items to preview.")
         return
 
-    items = json.loads(config.NOSTETUT_PATH.read_text(encoding="utf-8"))
+    items = json.loads(config.FLAGGED_PATH.read_text(encoding="utf-8"))
     if not items:
-        print("nostetut.json is empty — nothing to preview.")
+        print("No flagged items to preview.")
         return
 
     flagged = []
@@ -413,14 +415,14 @@ def cmd_preview_logged(days: int = 7) -> None:
 
 
 def cmd_reset_state() -> None:
-    print("This will erase all state: seen proposals, score log, and nostetut.")
+    print("This will erase all state: seen proposals, score log, and flagged items.")
     answer = input("Continue? [y/N] ").strip().lower()
     if answer != "y":
         print("Aborted.")
         return
     _save_json(config.SEEN_PROPOSALS_PATH, {})
     _save_json(config.SEEN_DOCUMENTS_PATH, {})
-    config.NOSTETUT_PATH.write_text("[]", encoding="utf-8")
+    config.FLAGGED_PATH.write_text("[]", encoding="utf-8")
     config.SCORE_LOG_PATH.write_text("", encoding="utf-8")
     print("State reset.")
 
@@ -437,7 +439,7 @@ Seurantabotti
 3  Update Kuluttajaliitto context
 4  Review logged items (7 days)
 5  Review logged items (custom range)
-6  Preview nostetut
+6  Preview flagged
 7  Preview logged (borderline)
 8  Reset state
 0  Exit
@@ -467,7 +469,7 @@ def cmd_interactive() -> None:
         "3": cmd_update_context,
         "4": lambda: cmd_review_logged(days=7),
         "5": _menu_review_custom,
-        "6": cmd_preview_nostetut,
+        "6": cmd_preview_flagged,
         "7": _menu_preview_logged,
         "8": cmd_reset_state,
     }
@@ -525,9 +527,9 @@ def main() -> None:
         help="Number of days to look back for --review-logged (default: 7)",
     )
     parser.add_argument(
-        "--preview-nostetut",
+        "--preview-flagged",
         action="store_true",
-        help="Preview nostetut.json as a formatted email digest",
+        help="Preview flagged items as an email digest",
     )
     parser.add_argument(
         "--preview-logged",
@@ -553,7 +555,7 @@ def main() -> None:
             args.midweek,
             args.update_context,
             args.review_logged,
-            args.preview_nostetut,
+            args.preview_flagged,
             args.preview_logged,
             args.reset_state,
             args.interactive,
@@ -577,8 +579,8 @@ def main() -> None:
     if args.review_logged:
         cmd_review_logged(days=args.days)
 
-    if args.preview_nostetut:
-        cmd_preview_nostetut()
+    if args.preview_flagged:
+        cmd_preview_flagged()
 
     if args.preview_logged:
         cmd_preview_logged(days=args.days)

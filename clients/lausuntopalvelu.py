@@ -80,7 +80,7 @@ def fetch_recent(client: httpx.Client, top: int = 50) -> list[Proposal]:
     return [_parse_entry(e) for e in root.findall("atom:entry", NS)]
 
 
-def _check_jakelu(html: str, name: str) -> bool:
+def _check_distribution_list(html: str, name: str) -> bool:
     m = re.search(
         r"<h5>\s*Jakelu:\s*</h5>\s*<div[^>]*>\s*<table[^>]*>(?P<table>.*?)</table>",
         html,
@@ -117,12 +117,12 @@ def get_participation_flags(
     proposal_id: str,
     org_name: str,
 ) -> tuple[bool, bool]:
-    """Fetch the participation page once and return (in_jakelu, has_responded)."""
+    """Fetch the participation page once and return (on_distribution_list, has_responded)."""
     url = PROPOSAL_URL.format(id=proposal_id)
     r = client.get(url, timeout=20)
     r.raise_for_status()
     html = r.text
-    return _check_jakelu(html, org_name), _check_responded(html, org_name)
+    return _check_distribution_list(html, org_name), _check_responded(html, org_name)
 
 
 def proposal_has_recipient(
@@ -130,5 +130,5 @@ def proposal_has_recipient(
     proposal_id: str,
     recipient_name: str,
 ) -> bool:
-    in_jakelu, _ = get_participation_flags(client, proposal_id, recipient_name)
-    return in_jakelu
+    on_distribution_list, _ = get_participation_flags(client, proposal_id, recipient_name)
+    return on_distribution_list

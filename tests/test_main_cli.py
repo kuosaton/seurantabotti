@@ -8,7 +8,7 @@ import main
 def test_main_dispatches_preview(monkeypatch) -> None:
     called = {"preview": False}
 
-    monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: called.__setitem__("preview", True))
+    monkeypatch.setattr(main, "cmd_preview_flagged", lambda: called.__setitem__("preview", True))
     monkeypatch.setattr(main, "cmd_daily", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_weekly", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_midweek", lambda dry_run: None)
@@ -17,7 +17,7 @@ def test_main_dispatches_preview(monkeypatch) -> None:
     monkeypatch.setattr(main, "cmd_preview_logged", lambda days: None)
     monkeypatch.setattr(
         "sys.argv",
-        ["main.py", "--preview-nostetut"],
+        ["main.py", "--preview-flagged"],
     )
 
     main.main()
@@ -27,7 +27,7 @@ def test_main_dispatches_preview(monkeypatch) -> None:
 def test_main_dispatches_preview_logged(monkeypatch) -> None:
     called = {"preview_logged": False}
 
-    monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: None)
+    monkeypatch.setattr(main, "cmd_preview_flagged", lambda: None)
     monkeypatch.setattr(main, "cmd_daily", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_weekly", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_midweek", lambda dry_run: None)
@@ -145,13 +145,13 @@ def test_interactive_menu_choice_review_logged(monkeypatch) -> None:
     assert called["review_logged"] is True
 
 
-def test_interactive_menu_choice_preview_nostetut(monkeypatch) -> None:
+def test_interactive_menu_choice_preview_flagged(monkeypatch) -> None:
     called = {"preview": False}
 
     def mock_preview():
         called["preview"] = True
 
-    # Simulate choosing "6" (preview nostetut) then "0" (exit)
+    # Simulate choosing "6" (preview flagged) then "0" (exit)
     inputs = ["6", "0"]
     input_iter = iter(inputs)
 
@@ -162,7 +162,7 @@ def test_interactive_menu_choice_preview_nostetut(monkeypatch) -> None:
         return "y"
 
     monkeypatch.setattr("builtins.input", mock_input)
-    monkeypatch.setattr(main, "cmd_preview_nostetut", mock_preview)
+    monkeypatch.setattr(main, "cmd_preview_flagged", mock_preview)
     monkeypatch.setattr("sys.argv", ["main.py"])
 
     main.main()
@@ -318,7 +318,7 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
     monkeypatch.setattr(
         main, "cmd_review_logged", lambda days: called.__setitem__("review_logged", days)
     )
-    monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: called.__setitem__("preview", 1))
+    monkeypatch.setattr(main, "cmd_preview_flagged", lambda: called.__setitem__("preview", 1))
     monkeypatch.setattr(
         main, "cmd_preview_logged", lambda days: called.__setitem__("preview_logged", days)
     )
@@ -333,7 +333,7 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
             "--review-logged",
             "--days",
             "3",
-            "--preview-nostetut",
+            "--preview-flagged",
             "--preview-logged",
             "--dry-run",
         ],
@@ -358,7 +358,7 @@ def test_main_dispatches_reset_state_flag(monkeypatch) -> None:
     monkeypatch.setattr(main, "cmd_weekly", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_midweek", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_review_logged", lambda days: None)
-    monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: None)
+    monkeypatch.setattr(main, "cmd_preview_flagged", lambda: None)
     monkeypatch.setattr(main, "cmd_preview_logged", lambda days: None)
     monkeypatch.setattr(main, "cmd_reset_state", lambda: called.__setitem__("reset", True))
     monkeypatch.setattr("sys.argv", ["main.py", "--reset-state"])
@@ -375,7 +375,7 @@ def test_main_dispatches_interactive_flag(monkeypatch) -> None:
     monkeypatch.setattr(main, "cmd_weekly", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_midweek", lambda dry_run: None)
     monkeypatch.setattr(main, "cmd_review_logged", lambda days: None)
-    monkeypatch.setattr(main, "cmd_preview_nostetut", lambda: None)
+    monkeypatch.setattr(main, "cmd_preview_flagged", lambda: None)
     monkeypatch.setattr(main, "cmd_preview_logged", lambda days: None)
     monkeypatch.setattr(main, "cmd_reset_state", lambda: None)
     monkeypatch.setattr(

@@ -17,13 +17,13 @@ def _setup_paths(tmp_path, monkeypatch):
     seen_path = state_dir / "seen_proposals.json"
     seen_docs_path = state_dir / "seen_documents.json"
     score_log_path = state_dir / "score_log.jsonl"
-    nostetut_path = state_dir / "nostetut.json"
+    flagged_path = state_dir / "nostetut.json"
     context_path = context_dir / "kuluttajaliitto.json"
 
     seen_path.write_text("{}", encoding="utf-8")
     seen_docs_path.write_text("{}", encoding="utf-8")
     score_log_path.write_text("", encoding="utf-8")
-    nostetut_path.write_text("[]", encoding="utf-8")
+    flagged_path.write_text("[]", encoding="utf-8")
     context_path.write_text(
         json.dumps({"last_updated": None, "recent_statements": []}),
         encoding="utf-8",
@@ -32,10 +32,10 @@ def _setup_paths(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "SEEN_PROPOSALS_PATH", seen_path)
     monkeypatch.setattr(config, "SEEN_DOCUMENTS_PATH", seen_docs_path)
     monkeypatch.setattr(config, "SCORE_LOG_PATH", score_log_path)
-    monkeypatch.setattr(config, "NOSTETUT_PATH", nostetut_path)
+    monkeypatch.setattr(config, "FLAGGED_PATH", flagged_path)
     monkeypatch.setattr(config, "CONTEXT_PATH", context_path)
 
-    return seen_path, seen_docs_path, score_log_path, nostetut_path, context_path
+    return seen_path, seen_docs_path, score_log_path, flagged_path, context_path
 
 
 def test_load_json_missing_and_size_boundaries(tmp_path) -> None:
@@ -64,7 +64,7 @@ def test_save_json_writes_pretty_utf8_json(tmp_path) -> None:
 
 
 def test_append_log_writes_jsonl_with_newline(tmp_path, monkeypatch) -> None:
-    _seen_path, _seen_docs_path, score_log_path, _nostetut_path, _context_path = _setup_paths(
+    _seen_path, _seen_docs_path, score_log_path, _flagged_path, _context_path = _setup_paths(
         tmp_path, monkeypatch
     )
 
@@ -81,23 +81,23 @@ def test_append_log_writes_jsonl_with_newline(tmp_path, monkeypatch) -> None:
     assert json.loads(lines[1])["score"] == 8
 
 
-def test_append_nostetut_appends_existing_items(tmp_path, monkeypatch) -> None:
-    _seen_path, _seen_docs_path, _score_log_path, nostetut_path, _context_path = _setup_paths(
+def test_append_flagged_appends_existing_items(tmp_path, monkeypatch) -> None:
+    _seen_path, _seen_docs_path, _score_log_path, flagged_path, _context_path = _setup_paths(
         tmp_path, monkeypatch
     )
-    nostetut_path.write_text(
+    flagged_path.write_text(
         json.dumps([{"id": "a", "score": 7}], ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
-    main._append_nostetut({"id": "b", "score": 8})
+    main._append_flagged({"id": "b", "score": 8})
 
-    items = json.loads(nostetut_path.read_text(encoding="utf-8"))
+    items = json.loads(flagged_path.read_text(encoding="utf-8"))
     assert [item["id"] for item in items] == ["a", "b"]
 
 
 def test_load_context_boundary_and_valid_content(tmp_path, monkeypatch) -> None:
-    _seen_path, _seen_docs_path, _score_log_path, _nostetut_path, context_path = _setup_paths(
+    _seen_path, _seen_docs_path, _score_log_path, _flagged_path, context_path = _setup_paths(
         tmp_path, monkeypatch
     )
 
@@ -113,7 +113,7 @@ def test_load_context_boundary_and_valid_content(tmp_path, monkeypatch) -> None:
 
 
 def test_record_result_populates_seen_and_log_payload(tmp_path, monkeypatch) -> None:
-    _seen_path, _seen_docs_path, _score_log_path, _nostetut_path, _context_path = _setup_paths(
+    _seen_path, _seen_docs_path, _score_log_path, _flagged_path, _context_path = _setup_paths(
         tmp_path, monkeypatch
     )
 

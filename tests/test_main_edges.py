@@ -16,12 +16,12 @@ def _setup_state_paths(tmp_path, monkeypatch) -> tuple:
 
     seen_path = state_dir / "seen_proposals.json"
     score_log_path = state_dir / "score_log.jsonl"
-    nostetut_path = state_dir / "nostetut.json"
+    flagged_path = state_dir / "nostetut.json"
     context_path = context_dir / "kuluttajaliitto.json"
 
     seen_path.write_text("{}", encoding="utf-8")
     score_log_path.write_text("", encoding="utf-8")
-    nostetut_path.write_text("[]", encoding="utf-8")
+    flagged_path.write_text("[]", encoding="utf-8")
     context_path.write_text(
         json.dumps({"last_updated": None, "recent_statements": []}),
         encoding="utf-8",
@@ -29,17 +29,17 @@ def _setup_state_paths(tmp_path, monkeypatch) -> tuple:
 
     monkeypatch.setattr(config, "SEEN_PROPOSALS_PATH", seen_path)
     monkeypatch.setattr(config, "SCORE_LOG_PATH", score_log_path)
-    monkeypatch.setattr(config, "NOSTETUT_PATH", nostetut_path)
+    monkeypatch.setattr(config, "FLAGGED_PATH", flagged_path)
     monkeypatch.setattr(config, "CONTEXT_PATH", context_path)
     monkeypatch.setattr(config, "NOTIFY_THRESHOLD", 7)
     monkeypatch.setattr(config, "LOG_THRESHOLD", 4)
     monkeypatch.setattr(config, "LAUSUNTOPALVELU_FETCH_TOP", 5)
 
-    return seen_path, score_log_path, nostetut_path, context_path
+    return seen_path, score_log_path, flagged_path, context_path
 
 
 def test_load_context_defaults_when_missing(tmp_path, monkeypatch) -> None:
-    _seen_path, _score_log_path, _nostetut_path, context_path = _setup_state_paths(
+    _seen_path, _score_log_path, _flagged_path, context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     context_path.unlink()
@@ -49,7 +49,7 @@ def test_load_context_defaults_when_missing(tmp_path, monkeypatch) -> None:
 
 
 def test_save_context_writes_json(tmp_path, monkeypatch) -> None:
-    _seen_path, _score_log_path, _nostetut_path, context_path = _setup_state_paths(
+    _seen_path, _score_log_path, _flagged_path, context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     payload = {"last_updated": "2026-04-22", "recent_statements": [{"title": "A"}]}
@@ -59,10 +59,10 @@ def test_save_context_writes_json(tmp_path, monkeypatch) -> None:
     assert stored == payload
 
 
-def test_cmd_daily_warns_if_jakelu_fetch_fails_and_drops_low_score(
+def test_cmd_daily_warns_if_distribution_lookup_fails_and_drops_low_score(
     tmp_path, monkeypatch, capsys
 ) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     proposal = Proposal(
@@ -77,10 +77,10 @@ def test_cmd_daily_warns_if_jakelu_fetch_fails_and_drops_low_score(
 
     monkeypatch.setattr(main, "fetch_recent", lambda client, top: [proposal])
 
-    def _raise_jakelu(*args, **kwargs):
-        raise main.httpx.HTTPError("jakelu unavailable")
+    def _raise_distribution(*args, **kwargs):
+        raise main.httpx.HTTPError("distribution lookup unavailable")
 
-    monkeypatch.setattr(main, "get_participation_flags", _raise_jakelu)
+    monkeypatch.setattr(main, "get_participation_flags", _raise_distribution)
     monkeypatch.setattr(
         main,
         "score_item",
@@ -95,7 +95,7 @@ def test_cmd_daily_warns_if_jakelu_fetch_fails_and_drops_low_score(
 
 
 def test_cmd_review_logged_skips_blank_and_invalid_json(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     now = datetime.now(main.UTC).isoformat()
@@ -115,22 +115,22 @@ def test_cmd_review_logged_skips_blank_and_invalid_json(tmp_path, monkeypatch, c
     assert "No scored items above threshold" in out
 
 
-def test_cmd_preview_nostetut_empty_list_branch(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, _score_log_path, nostetut_path, _context_path = _setup_state_paths(
+def test_cmd_preview_flagged_empty_list_branch(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, _score_log_path, flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
-    nostetut_path.write_text("[ ]", encoding="utf-8")
+    flagged_path.write_text("[ ]", encoding="utf-8")
 
-    main.cmd_preview_nostetut()
+    main.cmd_preview_flagged()
     out = capsys.readouterr().out
-    assert "nothing to preview" in out.lower()
+    assert "no flagged items" in out.lower()
 
 
-def test_cmd_preview_nostetut_valid_deadline_branch(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, _score_log_path, nostetut_path, _context_path = _setup_state_paths(
+def test_cmd_preview_flagged_valid_deadline_branch(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, _score_log_path, flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
-    nostetut_path.write_text(
+    flagged_path.write_text(
         json.dumps(
             [
                 {
@@ -154,6 +154,6 @@ def test_cmd_preview_nostetut_valid_deadline_branch(tmp_path, monkeypatch, capsy
         return "SUBJ2", "HTML", "TEXT2"
 
     monkeypatch.setattr(main, "build_daily_digest", _fake_build_daily_digest)
-    main.cmd_preview_nostetut()
+    main.cmd_preview_flagged()
     out = capsys.readouterr().out
     assert "Subject: SUBJ2" in out

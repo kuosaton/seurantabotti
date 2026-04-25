@@ -17,12 +17,12 @@ def _setup_state_paths(tmp_path, monkeypatch) -> tuple:
 
     seen_path = state_dir / "seen_proposals.json"
     score_log_path = state_dir / "score_log.jsonl"
-    nostetut_path = state_dir / "nostetut.json"
+    flagged_path = state_dir / "nostetut.json"
     context_path = context_dir / "kuluttajaliitto.json"
 
     seen_path.write_text("{}", encoding="utf-8")
     score_log_path.write_text("", encoding="utf-8")
-    nostetut_path.write_text("[]", encoding="utf-8")
+    flagged_path.write_text("[]", encoding="utf-8")
     context_path.write_text(
         json.dumps({"last_updated": None, "recent_statements": []}),
         encoding="utf-8",
@@ -30,17 +30,17 @@ def _setup_state_paths(tmp_path, monkeypatch) -> tuple:
 
     monkeypatch.setattr(config, "SEEN_PROPOSALS_PATH", seen_path)
     monkeypatch.setattr(config, "SCORE_LOG_PATH", score_log_path)
-    monkeypatch.setattr(config, "NOSTETUT_PATH", nostetut_path)
+    monkeypatch.setattr(config, "FLAGGED_PATH", flagged_path)
     monkeypatch.setattr(config, "CONTEXT_PATH", context_path)
     monkeypatch.setattr(config, "NOTIFY_THRESHOLD", 7)
     monkeypatch.setattr(config, "LOG_THRESHOLD", 4)
     monkeypatch.setattr(config, "LAUSUNTOPALVELU_FETCH_TOP", 5)
 
-    return seen_path, score_log_path, nostetut_path, context_path
+    return seen_path, score_log_path, flagged_path, context_path
 
 
 def test_cmd_daily_no_new_proposals_exits_cleanly(tmp_path, monkeypatch, capsys) -> None:
-    seen_path, _score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    seen_path, _score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
 
@@ -70,7 +70,7 @@ def test_cmd_daily_no_new_proposals_exits_cleanly(tmp_path, monkeypatch, capsys)
 
 
 def test_cmd_daily_borderline_item_is_logged_only(tmp_path, monkeypatch) -> None:
-    seen_path, score_log_path, nostetut_path, _context_path = _setup_state_paths(
+    seen_path, score_log_path, flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
 
@@ -97,8 +97,8 @@ def test_cmd_daily_borderline_item_is_logged_only(tmp_path, monkeypatch) -> None
     seen = json.loads(seen_path.read_text(encoding="utf-8"))
     assert seen["borderline-1"]["score"] == 5
 
-    nostetut = json.loads(nostetut_path.read_text(encoding="utf-8"))
-    assert nostetut == []
+    flagged = json.loads(flagged_path.read_text(encoding="utf-8"))
+    assert flagged == []
 
     log_lines = [
         line for line in score_log_path.read_text(encoding="utf-8").splitlines() if line.strip()
@@ -113,7 +113,7 @@ def test_cmd_daily_borderline_item_is_logged_only(tmp_path, monkeypatch) -> None
 
 
 def test_cmd_review_logged_prints_flagged_and_borderline(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     now = datetime.now(main.UTC)
@@ -145,8 +145,8 @@ def test_cmd_review_logged_prints_flagged_and_borderline(tmp_path, monkeypatch, 
 
     main.cmd_review_logged(days=7)
     out = capsys.readouterr().out
-    assert "NOSTETTU" in out
-    assert "LOKITETTU" in out
+    assert "FLAGGED" in out
+    assert "LOGGED" in out
     assert "Nostettava" in out
     assert "Rajalla" in out
     assert "Vanha" not in out
@@ -185,7 +185,7 @@ def test_cmd_update_context_fetches_and_saves(monkeypatch) -> None:
 
 
 def test_cmd_daily_handles_scoring_exception(tmp_path, monkeypatch) -> None:
-    seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
 
@@ -214,7 +214,7 @@ def test_cmd_daily_handles_scoring_exception(tmp_path, monkeypatch) -> None:
 
 
 def test_cmd_daily_non_dry_run_sends_email(tmp_path, monkeypatch) -> None:
-    _seen_path, _score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, _score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     calls: dict = {}
@@ -255,7 +255,7 @@ def test_cmd_daily_non_dry_run_sends_email(tmp_path, monkeypatch) -> None:
 
 
 def test_cmd_daily_aborts_on_user_no(tmp_path, monkeypatch, capsys) -> None:
-    seen_path, score_log_path, nostetut_path, _context_path = _setup_state_paths(
+    seen_path, score_log_path, flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
 
@@ -282,11 +282,11 @@ def test_cmd_daily_aborts_on_user_no(tmp_path, monkeypatch, capsys) -> None:
     assert "Aborted." in out
     assert json.loads(seen_path.read_text(encoding="utf-8")) == {}
     assert score_log_path.read_text(encoding="utf-8") == ""
-    assert json.loads(nostetut_path.read_text(encoding="utf-8")) == []
+    assert json.loads(flagged_path.read_text(encoding="utf-8")) == []
 
 
 def test_cmd_daily_dry_run_prints_digest_but_does_not_send(tmp_path, monkeypatch, capsys) -> None:
-    seen_path, _score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    seen_path, _score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     proposal = Proposal(
@@ -326,7 +326,7 @@ def test_cmd_daily_dry_run_prints_digest_but_does_not_send(tmp_path, monkeypatch
 
 
 def test_cmd_review_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     score_log_path.unlink()
@@ -337,7 +337,7 @@ def test_cmd_review_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:
 
 
 def test_cmd_review_logged_prints_only_flagged_section(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     now = datetime.now(main.UTC).isoformat()
@@ -348,12 +348,12 @@ def test_cmd_review_logged_prints_only_flagged_section(tmp_path, monkeypatch, ca
 
     main.cmd_review_logged(days=7)
     out = capsys.readouterr().out
-    assert "NOSTETTU" in out
-    assert "LOKITETTU" not in out
+    assert "FLAGGED" in out
+    assert "LOGGED" not in out
 
 
 def test_cmd_review_logged_prints_only_borderline_section(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     now = datetime.now(main.UTC).isoformat()
@@ -364,12 +364,12 @@ def test_cmd_review_logged_prints_only_borderline_section(tmp_path, monkeypatch,
 
     main.cmd_review_logged(days=7)
     out = capsys.readouterr().out
-    assert "NOSTETTU" not in out
-    assert "LOKITETTU" in out
+    assert "FLAGGED" not in out
+    assert "LOGGED" in out
 
 
 def test_cmd_preview_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     score_log_path.unlink()
@@ -380,7 +380,7 @@ def test_cmd_preview_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:
 
 
 def test_cmd_preview_logged_empty_result(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     now = datetime.now(main.UTC).isoformat()
@@ -396,7 +396,7 @@ def test_cmd_preview_logged_empty_result(tmp_path, monkeypatch, capsys) -> None:
 
 
 def test_cmd_preview_logged_renders_borderline_items(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     now = datetime.now(main.UTC)
@@ -443,7 +443,7 @@ def test_cmd_preview_logged_renders_borderline_items(tmp_path, monkeypatch, caps
 
 
 def test_cmd_preview_logged_filters_above_notify_threshold(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     now = datetime.now(main.UTC).isoformat()
@@ -469,7 +469,7 @@ def test_cmd_preview_logged_filters_above_notify_threshold(tmp_path, monkeypatch
 
 
 def test_cmd_preview_logged_invalid_dates_still_builds(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     now = datetime.now(main.UTC).isoformat()
@@ -497,13 +497,13 @@ def test_cmd_preview_logged_invalid_dates_still_builds(tmp_path, monkeypatch, ca
     assert captured_items[0]["proposal"].deadline is None
 
 
-def test_cmd_preview_nostetut_invalid_published_on_still_builds(
+def test_cmd_preview_flagged_invalid_published_on_still_builds(
     tmp_path, monkeypatch, capsys
 ) -> None:
-    _seen_path, _score_log_path, nostetut_path, _context_path = _setup_state_paths(
+    _seen_path, _score_log_path, flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
-    nostetut_path.write_text(
+    flagged_path.write_text(
         json.dumps(
             [
                 {
@@ -527,31 +527,31 @@ def test_cmd_preview_nostetut_invalid_published_on_still_builds(
         lambda items: captured_items.extend(items) or ("S", "H", "T"),
     )
 
-    main.cmd_preview_nostetut()
+    main.cmd_preview_flagged()
     assert len(captured_items) == 1
     assert captured_items[0]["proposal"].published_on is None
 
 
 def test_cmd_reset_state_clears_files(tmp_path, monkeypatch, capsys) -> None:
-    seen_path, score_log_path, nostetut_path, _context_path = _setup_state_paths(
+    seen_path, score_log_path, flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     monkeypatch.setattr(config, "SEEN_DOCUMENTS_PATH", tmp_path / "state" / "seen_documents.json")
     seen_path.write_text('{"old": true}', encoding="utf-8")
     score_log_path.write_text('{"score": 5}\n', encoding="utf-8")
-    nostetut_path.write_text('[{"score": 8}]', encoding="utf-8")
+    flagged_path.write_text('[{"score": 8}]', encoding="utf-8")
 
     monkeypatch.setattr("builtins.input", lambda _: "y")
     main.cmd_reset_state()
 
     assert json.loads(seen_path.read_text()) == {}
-    assert json.loads(nostetut_path.read_text()) == []
+    assert json.loads(flagged_path.read_text()) == []
     assert score_log_path.read_text() == ""
     assert "State reset." in capsys.readouterr().out
 
 
 def test_cmd_reset_state_aborts_on_no(tmp_path, monkeypatch, capsys) -> None:
-    seen_path, _score_log_path, _nostetut_path, _context_path = _setup_state_paths(
+    seen_path, _score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
     seen_path.write_text('{"old": true}', encoding="utf-8")
@@ -563,22 +563,22 @@ def test_cmd_reset_state_aborts_on_no(tmp_path, monkeypatch, capsys) -> None:
     assert "Aborted." in capsys.readouterr().out
 
 
-def test_cmd_preview_nostetut_empty_file(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, _score_log_path, nostetut_path, _context_path = _setup_state_paths(
+def test_cmd_preview_flagged_empty_file(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, _score_log_path, flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
-    nostetut_path.write_text("[]", encoding="utf-8")
+    flagged_path.write_text("[]", encoding="utf-8")
 
-    main.cmd_preview_nostetut()
+    main.cmd_preview_flagged()
     out = capsys.readouterr().out
-    assert "nothing to preview" in out.lower()
+    assert "no flagged items" in out.lower()
 
 
-def test_cmd_preview_nostetut_invalid_deadline_still_builds(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, _score_log_path, nostetut_path, _context_path = _setup_state_paths(
+def test_cmd_preview_flagged_invalid_deadline_still_builds(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, _score_log_path, flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
-    nostetut_path.write_text(
+    flagged_path.write_text(
         json.dumps(
             [
                 {
@@ -605,18 +605,18 @@ def test_cmd_preview_nostetut_invalid_deadline_still_builds(tmp_path, monkeypatc
         ),
     )
 
-    main.cmd_preview_nostetut()
+    main.cmd_preview_flagged()
     out = capsys.readouterr().out
     assert "Subject: SUBJ" in out
     assert "TEXT -" not in out
     assert "TEXT" in out
 
 
-def test_cmd_preview_nostetut_missing_deadline_still_builds(tmp_path, monkeypatch, capsys) -> None:
-    _seen_path, _score_log_path, nostetut_path, _context_path = _setup_state_paths(
+def test_cmd_preview_flagged_missing_deadline_still_builds(tmp_path, monkeypatch, capsys) -> None:
+    _seen_path, _score_log_path, flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
-    nostetut_path.write_text(
+    flagged_path.write_text(
         json.dumps(
             [
                 {
@@ -638,7 +638,7 @@ def test_cmd_preview_nostetut_missing_deadline_still_builds(tmp_path, monkeypatc
 
     monkeypatch.setattr(main, "build_daily_digest", _fake_build_daily_digest)
 
-    main.cmd_preview_nostetut()
+    main.cmd_preview_flagged()
     out = capsys.readouterr().out
     assert "Subject: SUBJ3" in out
     assert "TEXT3" in out

@@ -15,7 +15,7 @@ CONTEXT_DIR = ROOT / "context"
 SEEN_PROPOSALS_PATH = STATE_DIR / "seen_proposals.json"
 SEEN_DOCUMENTS_PATH = STATE_DIR / "seen_documents.json"
 SCORE_LOG_PATH = STATE_DIR / "score_log.jsonl"
-NOSTETUT_PATH = STATE_DIR / "nostetut.json"
+FLAGGED_PATH = STATE_DIR / "nostetut.json"
 CONTEXT_PATH = CONTEXT_DIR / "kuluttajaliitto.json"
 
 # Committee pages — these are the main pages that embed schedule + agenda data
