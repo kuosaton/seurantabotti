@@ -3,53 +3,68 @@
 [![CI](https://github.com/kuosaton/seurantabotti/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kuosaton/seurantabotti/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/kuosaton/seurantabotti/graph/badge.svg?token=DM3PJTS30G)](https://codecov.io/gh/kuosaton/seurantabotti) [![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fkuosaton%2Fseurantabotti%2Frefs%2Fheads%2Fmain%2Fpyproject.toml&logo=python&logoColor=white)](https://www.python.org/)
 [![uv package manager](https://img.shields.io/badge/uv-package%20manager?logo=uv&label=package%20manager&color=%23DE5FE9)](https://docs.astral.sh/uv/)
 
-Helps [Kuluttajaliitto](https://www.kuluttajaliitto.fi/) (The Consumers’ Union of Finland) keep up with [lausuntopalvelu.fi](https://www.lausuntopalvelu.fi), the Finnish public administration's portal for consulting the public on draft proposals and decisions.
+A large language model-based tool to help [Kuluttajaliitto](https://www.kuluttajaliitto.fi/) (The Consumers’ Union of Finland) keep up with [lausuntopalvelu.fi](https://www.lausuntopalvelu.fi), the Finnish public administration's portal for consulting the public on draft proposals and decisions.
 
-Lausuntopalvelu publishes hundreds of new requests for comment (lausuntopyyntö) every month, and manually reviewing them all to spot the ones worth responding to is time-consuming. Seurantabotti scores them with Claude and emails only the most relevant ones to your inbox.
+Lausuntopalvelu publishes hundreds of new requests for comment (lausuntopyyntö) every month, and manually reviewing them all to spot the ones worth responding to is time-consuming.
+
+Seurantabotti helps cut through the noise by assessing the relevancy of open requests using [Claude](https://claude.com/product/overview) and highlighting the most relevant ones.
 
 ## How it works
 
-The bot is designed to identify proposals that are relevant to Kuluttajaliitto's mandate but that Kuluttajaliitto has not already been made aware of via official channels.
+The bot is designed to uncover proposals that: (i) are relevant to Kuluttajaliitto and (ii) Kuluttajaliitto has not already been made aware of.
 
-For each new proposal the bot:
+For new proposals, the bot:
 
-1. **Ignores it if Kuluttajaliitto is on the distribution list (jakelulista):** the requesting organisation has already identified Kuluttajaliitto as a relevant party and will contact them directly.
-2. **Ignores it if Kuluttajaliitto has already submitted a response.** No need to flag a proposal that has already been acted on.
-3. **Scores its relevancy from 0 to 10** using Claude Haiku 4.5, comparing the proposal title and description against Kuluttajaliitto's previously published statements and areas of focus.
+1. **Ignores ones with Kuluttajaliitto on the distribution list (jakelulista)**: the requesting organisation has already identified Kuluttajaliitto as a relevant party and will notify them directly.
+2. **Ignores ones that Kuluttajaliitto has already responded to.**
+3. **Scores their relevancy from 0 to 10.**
 4. **Flags high-scoring proposals for review** (score ≥ 6).
-5. **(Upcoming feature) notifies of flagged proposals** by sending a formatted email digest.
+5. **Notifies designated recipients** of new flagged proposals via an email digest (upcoming feature).
 
 ## Scoring
 
-Each proposal is scored 0-10 by Claude against Kuluttajaliitto's recent statements and mandate. The model is given this rubric:
+Each proposal is scored on scale from 0 to 10 based on Kuluttajaliitto's previously published statements and areas of focus by the large language model [Claude Haiku 4.5](https://www.anthropic.com/news/claude-haiku-4-5). The model is given the following rubric:
 
 | Score | Rubric                                                                                                                                                                               |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 8–10  | Clearly within Kuluttajaliitto's core mandate: consumer protection, product safety, financial services, housing, or other areas Kuluttajaliitto has repeatedly issued statements on. |
-| 5–7   | Concerns consumers indirectly, or grazes Kuluttajaliitto's priorities without being core.                                                                                            |
-| 2–4   | Thin connection to consumer matters.                                                                                                                                                 |
-| 0–1   | No discernible connection to consumers or Kuluttajaliitto's work.                                                                                                                    |
+| 8-10  | Clearly within Kuluttajaliitto's core mandate: consumer protection, product safety, financial services, housing, or other areas Kuluttajaliitto has repeatedly issued statements on. |
+| 5-7   | Concerns consumers indirectly, or grazes Kuluttajaliitto's priorities without being core.                                                                                            |
+| 2-4   | Thin connection to consumer matters.                                                                                                                                                 |
+| 0-1   | No discernible connection to consumers or Kuluttajaliitto's work.                                                                                                                    |
 
 The bot then acts on the score:
 
 | Score | Action                                                         |
 | ----- | -------------------------------------------------------------- |
 | ≥ 6   | Flagged for review, included in the email digest               |
-| 4–5   | Logged as potentially interesting (lower confidence), no email |
-| 0–3   | Dropped silently                                               |
+| 4-5   | Logged as potentially interesting (lower confidence), no email |
+| 0-3   | Dropped silently                                               |
 
-## Setup
+## Usage
 
-**Prerequisites:** [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Python 3.14](https://docs.astral.sh/uv/guides/install-python/).
+### Prerequisites
 
-**1. Install dependencies:**
+1. [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package and project manager)
+2. [Python 3.14](https://www.python.org/downloads/)
+
+> [!TIP]
+> Our recommended method is [using uv to install and manage Python versions](https://docs.astral.sh/uv/guides/install-python/).
+
+### Setup
+
+#### 0. Get the source code
+
+- Download the [latest release (v1.1.0)](https://github.com/kuosaton/seurantabotti/releases/tag/v1.1.0) and extract the compressed files (or alternatively clone the repository) to a location of your choice.
+- Navigate to the repository root (`seurantabotti/`).
+
+#### 1. Install the project dependencies
 
 ```bash
 uv sync               # runtime dependencies only
 uv sync --extra dev   # include dev tools (pytest, ruff, pyright, pre-commit)
 ```
 
-**2. Configure environment:**
+#### 2. Configure the environment
 
 ```bash
 cp .env.example .env
@@ -64,15 +79,15 @@ Edit `.env` with your values:
 | `SMTP_PASS`         | Gmail app password               |
 | `RECIPIENT_EMAIL`   | Address to deliver digests to    |
 
-**3. Fetch up-to-date Kuluttajaliitto statement context** (required before the first daily run):
+#### 3. Fetch up-to-date Kuluttajaliitto published statements context (required before first run)
 
 ```bash
 uv run python main.py --update-context
 ```
 
-## Running the bot
+### Using the tool
 
-**Interactive menu:**
+#### **Option A.** Interactive command-line interface
 
 ```bash
 uv run python main.py
@@ -95,10 +110,10 @@ Seurantabotti
 ─────────────────────────────────────
 ```
 
-**Command-line interface:**
+#### **Option B.** Basic command-line interface
 
 ```bash
-# Daily lausuntopalvelu check — scores new proposals, sends email if threshold met
+# Daily lausuntopalvelu.fi check — scores new proposals, sends email if threshold met
 uv run python main.py --daily
 
 # Dry run — scores and logs but does not send email
@@ -107,7 +122,7 @@ uv run python main.py --daily --dry-run
 # Refresh Kuluttajaliitto context from their website
 uv run python main.py --update-context
 
-# Review borderline items (score 4–5) from the last 7 days
+# Review borderline items (score 4-5) from the last 7 days
 uv run python main.py --review-logged
 uv run python main.py --review-logged --days 14
 
