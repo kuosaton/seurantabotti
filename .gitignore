@@ -55,3 +55,6 @@ lcov.info
 # Personal notes
 todo.md
 internal-docs/
+
+# Claude
+.claude/
