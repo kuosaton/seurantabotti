@@ -595,20 +595,15 @@ def test_cmd_preview_flagged_invalid_deadline_still_builds(tmp_path, monkeypatch
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(
-        main,
-        "build_daily_digest",
-        lambda flagged: (
-            "SUBJ",
-            "HTML",
-            "TEXT " + flagged[0]["proposal"].organization_name,
-        ),
-    )
+    def _fake_build_daily_digest(flagged):
+        assert flagged[0]["proposal"].deadline is None
+        return "SUBJ", "HTML", "TEXT"
+
+    monkeypatch.setattr(main, "build_daily_digest", _fake_build_daily_digest)
 
     main.cmd_preview_flagged()
     out = capsys.readouterr().out
     assert "Subject: SUBJ" in out
-    assert "TEXT " not in out
     assert "TEXT" in out
 
 
