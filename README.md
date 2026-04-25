@@ -146,6 +146,77 @@ uv run python main.py --reset-state
 
 `--weekly` and `--midweek` are planned for v2.0 (see below).
 
+## Example output
+
+The snippets below use fabricated proposal titles and organisation names to keep the snapshot stable; real runs print the same shapes with live data.
+
+### Daily check (`--daily --dry-run`)
+
+Fetches new proposals, asks for confirmation, scores each one, and prints the digest that _would_ be sent.
+
+```text
+Fetching lausuntopalvelu proposals...
+  50 fetched, 38 open, 6 new
+Score 7 proposal(s)? [Y/n] y
+  [SKIP DISTRIBUTION] Asetus elintarviketurvallisuuden valvonnasta
+  [SKIP RESPONDED] Hallituksen esitys kuluttajansuojalain muuttamisesta
+  [LOG 5/10] Hallituksen esitys laiksi etämyynnin tiedonantovelvoitteista
+  [DROP 0/10] Luonnos ydinvoimalaitosten teknisistä turvallisuusvaatimuksista
+  [FLAG 6/10] Asetus asuntolainojen ennenaikaisesta takaisinmaksusta
+  [FLAG 8/10] Hallituksen esitys verkkokaupan palautusoikeudesta
+  [LOG 4/10] Lakiluonnos rakennusvalvontamaksuista
+
+2 item(s) above threshold:
+  [8/10] Hallituksen esitys verkkokaupan palautusoikeudesta
+  [6/10] Asetus asuntolainojen ennenaikaisesta takaisinmaksusta
+
+
+--- DRY RUN: would send email ---
+Subject: Uusia lausuntopyyntöjä, 25.4.2026
+
+2 uutta lausuntopyyntöä, jotka saattavat kiinnostaa Kuluttajaliittoa (pisteet 6-8):
+
+────────────────────────────────────────────────────────────
+▸ [8/10] Luonnos hallituksen esitykseksi verkkokaupan palautusoikeudesta
+   Pyytäjä:   Esimerkkiministeriö
+   Julkaistu: 24.4.2026
+   Määräaika: 22.5.2026 (27 pv)
+   Asia koskee etämyynnin peruuttamisoikeutta ja verkkokaupan
+   kuluttajansuojaa, jotka ovat Kuluttajaliiton ydinaluetta.
+   Kuluttajaliitto on antanut aiheeseen liittyen useita lausuntoja
+   kuluttajansuojadirektiivin täytäntöönpanon yhteydessä.
+   Teemat:    verkkokauppa, etämyynti, peruuttamisoikeus, kuluttajansuoja
+   https://www.lausuntopalvelu.fi/FI/Proposal/Participation?proposalId=xxxx
+   ...
+```
+
+Each listed proposal in the scoring loop is accompanied by a tag signifying the taken action:
+
+| Tag                 | Meaning                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `SKIP DISTRIBUTION` | Kuluttajaliitto is on the proposal's distribution list: skipped without scoring             |
+| `SKIP RESPONDED`    | Kuluttajaliitto has already submitted a response: skipped without scoring                   |
+| `FLAG x/10`         | Score at or above the notify threshold: included in the digest                              |
+| `LOG x/10`          | Score in the borderline band: recorded for `--review-logged` but not surfaced in the digest |
+| `DROP x/10`         | Score below the log threshold: not recorded                                                 |
+
+### Review logged items (`--review-logged --days 7`)
+
+Prints proposals that fell into the borderline range and their scoring rationale. This can help answer questions, such as:
+
+- Did anything slip under the bar?
+- Why was a proposal with a relevant-sounding title not flagged?
+
+```text
+--- LOGGED (2 items, score 4-5) ---
+
+[5/10] 2026-04-24  Hallituksen esitys laiksi etämyynnin tiedonantovelvoitteista
+  Sivuaa kuluttajansuojaa mutta painottuu yritysten velvoitteisiin.
+
+[4/10] 2026-04-22  Lakiluonnos rakennusvalvontamaksuista
+  Vaikutus kuluttajiin epäsuora rakentamisen kustannusten kautta.
+```
+
 ## Development
 
 ```bash
