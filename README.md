@@ -9,6 +9,13 @@ Lausuntopalvelu publishes hundreds of new requests for comment (lausuntopyyntö)
 
 Seurantabotti helps cut through the noise by assessing the relevancy of open requests using [Claude](https://claude.com/product/overview) and highlighting the most relevant ones.
 
+## Table of contents
+
+1. [How it works](#how-it-works)
+2. [Usage](#usage)
+3. [Planned features](#planned-features)
+4. [Development](#development)
+
 ## How it works
 
 The bot is designed to uncover proposals that: (i) are relevant to Kuluttajaliitto and (ii) Kuluttajaliitto has not already been made aware of.
@@ -21,14 +28,14 @@ For new proposals, the bot:
 4. **Flags high-scoring proposals for review** (score ≥ 6).
 5. **Notifies designated recipients** of new flagged proposals via an email digest (upcoming feature).
 
-## Data sources
+### Data sources
 
 All data comes from publicly accessible sources:
 
 - **[lausuntopalvelu.fi Open API](https://www.lausuntopalvelu.fi/api/v1/Lausuntopalvelu.svc)**: the source of the proposals being assessed. New requests for comment are fetched via the site's public OData/Atom feed; each proposal's distribution list and prior responses are read from its public participation page.
 - **[kuluttajaliitto.fi WordPress API](https://www.kuluttajaliitto.fi/wp-json/)**: the source of the relevance context. Kuluttajaliitto's published statements are pulled from the site's public WordPress REST API and used as the corpus the scoring model compares new proposals against.
 
-## Scoring
+### Scoring
 
 Each proposal is scored on scale from 0 to 10 based on Kuluttajaliitto's previously published statements and areas of focus by the large language model [Claude Haiku 4.5](https://www.anthropic.com/news/claude-haiku-4-5). The model is given the following rubric:
 
@@ -61,7 +68,7 @@ The bot then acts on the score:
 
 #### 0. Get the source code
 
-- Download the [latest release (v1.1.0)](https://github.com/kuosaton/seurantabotti/releases/tag/v1.1.0) and extract the compressed files (or alternatively clone the repository) to a location of your choice.
+- Download the [latest release](https://github.com/kuosaton/seurantabotti/releases/latest) and extract the compressed files to a location of your choice.
 - Navigate to the repository root (`seurantabotti/`).
 
 #### 1. Install the project dependencies
@@ -144,13 +151,11 @@ uv run python main.py --preview-logged --days 14
 uv run python main.py --reset-state
 ```
 
-`--weekly` and `--midweek` are planned for v2.0 (see below).
-
-## Example output
+### Example output
 
 The snippets below use fabricated proposal titles and organisation names to keep the snapshot stable; real runs print the same shapes with live data.
 
-### Daily check (`--daily --dry-run`)
+#### Daily check (`--daily --dry-run`)
 
 Fetches new proposals, asks for confirmation, scores each one, and prints the digest that _would_ be sent.
 
@@ -200,7 +205,7 @@ Each listed proposal in the scoring loop is accompanied by a tag signifying the 
 | `LOG x/10`          | Score in the borderline band: recorded for `--review-logged` but not surfaced in the digest |
 | `DROP x/10`         | Score below the log threshold: not recorded                                                 |
 
-### Review logged items (`--review-logged --days 7`)
+#### Review logged items (`--review-logged --days 7`)
 
 Prints proposals that fell into the borderline range and their scoring rationale. This can help answer questions, such as:
 
@@ -216,6 +221,16 @@ Prints proposals that fell into the borderline range and their scoring rationale
 [4/10] 2026-04-22  Lakiluonnos rakennusvalvontamaksuista
   Vaikutus kuluttajiin epäsuora rakentamisen kustannusten kautta.
 ```
+
+## Planned features
+
+### Parliamentary committee analysis (`--weekly`, `--midweek`)
+
+In addition to lausuntopalvelu.fi, Kuluttajaliitto needs to track proceedings in relevant parliamentary committees (talousvaliokunta, sosiaali- ja terveysvaliokunta). The planned `--weekly` and `--midweek` commands would score new committee items using the same Claude-based relevance model and include them in a weekly digest.
+
+### Email delivery
+
+The email formatting and sending infrastructure is already in place. The `--daily` command builds a full HTML + plain-text digest and can send it via Gmail SMTP when credentials are configured. Completing this for production use is a v2.0 milestone.
 
 ## Development
 
@@ -237,7 +252,7 @@ make mutation
 make mutation-results
 ```
 
-## State files
+### State files
 
 All state lives under `state/`:
 
@@ -248,17 +263,7 @@ All state lives under `state/`:
 | `nostetut.json`       | Items that crossed the notify threshold     |
 | `seen_documents.json` | Reserved for document-level deduplication   |
 
-## Planned features (v2.0)
-
-### Parliamentary committee analysis (`--weekly`, `--midweek`)
-
-In addition to lausuntopalvelu.fi, Kuluttajaliitto needs to track proceedings in relevant parliamentary committees (talousvaliokunta, sosiaali- ja terveysvaliokunta). The planned `--weekly` and `--midweek` commands would score new committee items using the same Claude-based relevance model and include them in a weekly digest.
-
-### Email delivery
-
-The email formatting and sending infrastructure is already in place. The `--daily` command builds a full HTML + plain-text digest and can send it via Gmail SMTP when credentials are configured. Completing this for production use is a v2.0 milestone.
-
-## About the development process
+### About the development process
 
 This project was developed using [Claude Code](https://claude.ai/code) as the primary coding agent, built as a rapid prototype for Kuluttajaliitto with a deliberate focus on delivering something working quickly while maintaining reliability, security, and test coverage.
 
