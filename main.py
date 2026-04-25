@@ -14,10 +14,21 @@ import httpx
 from dotenv import load_dotenv
 
 import config
+from clients.eduskunta import (
+    extract_documents,
+    fetch_agenda_xml,
+    fetch_committee_page,
+    parse_agenda_matters,
+)
 from clients.kuluttajaliitto import build_context, fetch_statements
 from clients.lausuntopalvelu import Proposal, fetch_recent, get_participation_flags
-from delivery.email import build_daily_digest, send_email
+from delivery.email import build_daily_digest, build_weekly_digest, send_email
 from processing.llm_scorer import score_item
+
+# Committees included in the --weekly run. MmV and YmV stay disabled until
+# their page structure is verified against a live capture (see
+# internal-docs/seurantabotti-technical-spec.md "Remaining unknowns" #3).
+_WEEKLY_COMMITTEES = ["talousvaliokunta"]
 
 load_dotenv()
 
@@ -253,12 +264,162 @@ def cmd_daily(dry_run: bool) -> None:
     _deliver_digest(flagged, dry_run)
 
 
-def cmd_weekly(dry_run: bool) -> None:  # pylint: disable=unused-argument
-    print(
-        "Weekly committee digest is not yet implemented (planned for version 0.3.0).",
-        file=sys.stderr,
+def _collect_new_agendas(client: httpx.Client, seen_docs: dict) -> list[tuple]:
+    """Return list of (committee_key, Document) for unseen upcoming agendas."""
+    new_agendas: list[tuple] = []
+    for committee_key in _WEEKLY_COMMITTEES:
+        url = config.COMMITTEE_URLS[committee_key]
+        display = config.COMMITTEE_DISPLAY_NAMES[committee_key]
+        print(f"Fetching {display}...", flush=True)
+        try:
+            html = fetch_committee_page(client, url)
+            docs = extract_documents(html)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            print(f"  [ERROR] could not fetch/parse {display}: {exc}", file=sys.stderr)
+            continue
+        agendas = [
+            d
+            for d in docs
+            if d.tyyppikoodi.endswith("VE") and d.eduskuntatunnus and d.edktunnus not in seen_docs
+        ]
+        print(f"  {len(docs)} documents, {len(agendas)} new agendas")
+        new_agendas.extend((committee_key, a) for a in agendas)
+    return new_agendas
+
+
+def _resolve_agenda_matters(client: httpx.Client, new_agendas: list[tuple]) -> list[tuple]:
+    """Return list of (committee_key, Document, matters) for each agenda."""
+    resolved: list[tuple] = []
+    for committee_key, agenda in new_agendas:
+        try:
+            xml = fetch_agenda_xml(client, agenda.eduskuntatunnus)
+            matters = parse_agenda_matters(xml)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            print(
+                f"  [ERROR] could not fetch/parse {agenda.eduskuntatunnus}: {exc}",
+                file=sys.stderr,
+            )
+            continue
+        resolved.append((committee_key, agenda, matters))
+    return resolved
+
+
+def _score_weekly_matter(matter, committee_key: str, ctx: dict, dry_run: bool) -> dict | None:
+    try:
+        result = score_item(matter.title, matter.type, committee_key, ctx)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        print(f"  [ERROR] scoring {matter.eduskuntatunnus}: {exc}", file=sys.stderr)
+        return None
+
+    score = result["score"]
+    notified = score >= config.NOTIFY_THRESHOLD and not dry_run
+    _append_log(
+        {
+            "timestamp": datetime.now(UTC).isoformat(),
+            "source": committee_key,
+            "id": matter.eduskuntatunnus,
+            "title": matter.title,
+            "score": score,
+            "rationale": result.get("rationale", ""),
+            "themes": result.get("themes", []),
+            "notified": notified,
+        }
     )
-    sys.exit(1)
+    result["notified"] = notified
+    return result
+
+
+def _deliver_weekly(
+    committee_items: dict[str, list[dict]],
+    total_scored: int,
+    total_logged: int,
+    dry_run: bool,
+) -> None:
+    week_number = datetime.now(UTC).isocalendar().week
+    subject, html_body, text_body = build_weekly_digest(
+        committee_items, week_number, total_scored, total_logged
+    )
+    total_flagged = sum(len(v) for v in committee_items.values())
+    if dry_run:
+        print(f"\n--- DRY RUN: would send weekly digest ({total_flagged} flagged) ---")
+        print(f"Subject: {subject}\n")
+        print(text_body)
+    else:
+        send_email(subject=subject, html_body=html_body, text_body=text_body)
+        print(f"\nWeekly digest sent: {total_flagged} flagged, {total_logged} logged")
+
+
+def cmd_weekly(dry_run: bool) -> None:
+    ctx = _load_context()
+    if not ctx["recent_statements"]:
+        print(
+            "WARNING: Kuluttajaliitto context is empty. Run --update-context first.",
+            file=sys.stderr,
+        )
+
+    seen_docs = _load_json(config.SEEN_DOCUMENTS_PATH)
+
+    with httpx.Client() as client:
+        new_agendas = _collect_new_agendas(client, seen_docs)
+        if not new_agendas:
+            print("No new committee agendas to process.")
+            return
+        agenda_matters = _resolve_agenda_matters(client, new_agendas)
+
+    total_matters = sum(len(m) for _, _, m in agenda_matters)
+    if total_matters == 0:
+        print("No matters scheduled in the new agendas.")
+        return
+
+    answer = input(f"Score {total_matters} matter(s)? [Y/n] ").strip().lower()
+    if answer not in ("y", ""):
+        print("Aborted.")
+        return
+
+    for _key, agenda in new_agendas:
+        seen_docs[agenda.edktunnus] = {
+            "first_seen": datetime.now(UTC).isoformat(),
+            "eduskuntatunnus": agenda.eduskuntatunnus,
+            "nimeke": agenda.nimeke,
+            "score": None,
+            "matter_scores": {},
+        }
+
+    committee_items: dict[str, list[dict]] = {k: [] for k in _WEEKLY_COMMITTEES}
+    total_scored = 0
+    total_logged = 0
+
+    for committee_key, agenda, matters in agenda_matters:
+        for matter in matters:
+            result = _score_weekly_matter(matter, committee_key, ctx, dry_run)
+            if result is None:
+                continue
+            score = result["score"]
+            total_scored += 1
+            seen_docs[agenda.edktunnus]["matter_scores"][matter.eduskuntatunnus] = {
+                "score": score,
+                "notified": result["notified"],
+            }
+            if score >= config.NOTIFY_THRESHOLD:
+                print(f"  [FLAG {score}/10] {matter.eduskuntatunnus}: {matter.title}")
+                committee_items[committee_key].append(
+                    {
+                        "title": matter.title,
+                        "eduskuntatunnus": matter.eduskuntatunnus,
+                        "score": score,
+                        "rationale": result.get("rationale", ""),
+                        "themes": result.get("themes", []),
+                        "url": "",
+                    }
+                )
+            elif score >= config.LOG_THRESHOLD:
+                total_logged += 1
+                print(f"  [LOG {score}/10] {matter.eduskuntatunnus}: {matter.title}")
+            else:
+                print(f"  [DROP {score}/10] {matter.eduskuntatunnus}: {matter.title}")
+
+    _save_json(config.SEEN_DOCUMENTS_PATH, seen_docs)
+    _deliver_weekly(committee_items, total_scored, total_logged, dry_run)
 
 
 def cmd_midweek(dry_run: bool) -> None:  # pylint: disable=unused-argument

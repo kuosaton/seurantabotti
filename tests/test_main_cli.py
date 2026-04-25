@@ -309,11 +309,8 @@ def test_cmd_interactive_handles_keyboard_interrupt(monkeypatch) -> None:
 
 
 def test_unimplemented_commands_exit() -> None:
-    with pytest.raises(SystemExit) as weekly:
-        main.cmd_weekly(dry_run=True)
     with pytest.raises(SystemExit) as midweek:
         main.cmd_midweek(dry_run=True)
-    assert weekly.value.code == 1
     assert midweek.value.code == 1
 
 
