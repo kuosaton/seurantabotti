@@ -299,7 +299,7 @@ def cmd_review_logged(days: int = 7) -> None:
 
     if borderline:
         print(
-            f"--- LOGGED ({len(borderline)} items, score {config.LOG_THRESHOLD}–{config.NOTIFY_THRESHOLD - 1}) ---\n"
+            f"--- LOGGED ({len(borderline)} items, score {config.LOG_THRESHOLD}-{config.NOTIFY_THRESHOLD - 1}) ---\n"
         )
         _print_entries(borderline)
 
@@ -331,7 +331,7 @@ def cmd_preview_flagged() -> None:
                 pass
         proposal = SimpleNamespace(
             title=e.get("title", ""),
-            organization_name=e.get("organization") or "–",
+            organization_name=e.get("organization") or "-",
             deadline=deadline,
             published_on=published_on,
             url=e.get("url", ""),
@@ -395,7 +395,7 @@ def cmd_preview_logged(days: int = 7) -> None:
                 pass
         proposal = SimpleNamespace(
             title=e.get("title", ""),
-            organization_name=e.get("organization") or "–",
+            organization_name=e.get("organization") or "-",
             deadline=deadline,
             published_on=published_on,
             url=e.get("url", ""),
@@ -518,7 +518,7 @@ def main() -> None:
     parser.add_argument(
         "--review-logged",
         action="store_true",
-        help="Print borderline (score 4–5) items from the last 7 days",
+        help="Print borderline (score 4-5) items from the last 7 days",
     )
     parser.add_argument(
         "--days",

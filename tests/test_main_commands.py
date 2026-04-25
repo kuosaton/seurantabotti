@@ -608,7 +608,7 @@ def test_cmd_preview_flagged_invalid_deadline_still_builds(tmp_path, monkeypatch
     main.cmd_preview_flagged()
     out = capsys.readouterr().out
     assert "Subject: SUBJ" in out
-    assert "TEXT -" not in out
+    assert "TEXT " not in out
     assert "TEXT" in out
 
 

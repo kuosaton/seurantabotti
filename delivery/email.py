@@ -18,7 +18,7 @@ def _fmt_date(d: date | datetime) -> str:
 
 def _deadline_display(deadline: date | datetime | None) -> str:
     if deadline is None:
-        return "–"
+        return "-"
     d = deadline.date() if isinstance(deadline, datetime) else deadline
     days = (d - date.today()).days
     date_str = _fmt_date(deadline)
@@ -31,7 +31,7 @@ def _deadline_display(deadline: date | datetime | None) -> str:
 
 def _deadline_html(deadline: date | datetime | None) -> str:
     if deadline is None:
-        return "–"
+        return "-"
     d = deadline.date() if isinstance(deadline, datetime) else deadline
     days = (d - date.today()).days
     date_str = _fmt_date(deadline)
@@ -80,7 +80,7 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
 
     scores = [item["score"] for item in sorted_items]
     score_range = (
-        f"pisteet {min(scores)}–{max(scores)}" if len(scores) > 1 else f"pistemäärä {scores[0]}"
+        f"pisteet {min(scores)}-{max(scores)}" if len(scores) > 1 else f"pistemäärä {scores[0]}"
     )
     lines = [
         f"{count} uutta lausuntopyyntöä, jotka saattavat kiinnostaa Kuluttajaliittoa ({score_range}):\n"
@@ -88,7 +88,7 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
     separator = "─" * 60
     for item in sorted_items:
         p = item["proposal"]
-        published_str = _fmt_date(p.published_on) if getattr(p, "published_on", None) else "–"
+        published_str = _fmt_date(p.published_on) if getattr(p, "published_on", None) else "-"
         deadline_str = _deadline_display(p.deadline)
         themes = item.get("themes", [])
         entry = [
@@ -110,7 +110,7 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
     item_html = ""
     for item in sorted_items:
         p = item["proposal"]
-        published_str = _fmt_date(p.published_on) if getattr(p, "published_on", None) else "–"
+        published_str = _fmt_date(p.published_on) if getattr(p, "published_on", None) else "-"
         deadline_str = _deadline_html(p.deadline)
         themes = ", ".join(item.get("themes", []))
         item_html += f"""
@@ -164,7 +164,7 @@ def _weekly_text_body(
         for item in items:
             lines += [
                 f"▸ {item['title']}",
-                f"   Tunnus:     {item.get('eduskuntatunnus', '–')}",
+                f"   Tunnus:     {item.get('eduskuntatunnus', '-')}",
                 f"   Relevanssi: {item['score']}/10",
                 f"   {item['rationale']}",
                 f"   {item.get('url', '')}",
@@ -174,7 +174,7 @@ def _weekly_text_body(
         "---",
         f"Arvioitu yhteensä: {total_scored} asiaa",
         f"Nostettu: {total_flagged}",
-        f"Lokitettu (pistemäärä 4–6): {total_logged}",
+        f"Lokitettu (pistemäärä 4-6): {total_logged}",
     ]
     return "\n".join(lines)
 
@@ -226,7 +226,7 @@ def build_weekly_digest(
   <hr style="border:none;border-top:1px solid #ddd;margin:32px 0 16px;">
   <p style="font-size:12px;color:#888;">
     Arvioitu: {total_scored} asiaa &mdash; Nostettu: {total_flagged} &mdash;
-    Lokitettu (4–6): {total_logged}
+    Lokitettu (4-6): {total_logged}
   </p>
   <p style="font-size:11px;color:#aaa;">Seurantabotti</p>
 </body>
