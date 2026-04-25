@@ -230,7 +230,7 @@ In addition to lausuntopalvelu.fi, Kuluttajaliitto needs to track proceedings in
 
 ### Email delivery
 
-The email formatting and sending infrastructure is already in place. The `--daily` command builds a full HTML + plain-text digest and can send it via Gmail SMTP when credentials are configured. Completing this for production use is a v2.0 milestone.
+The email formatting and sending infrastructure is already in place. The `--daily` command builds a full HTML + plain-text digest and can send it via Gmail SMTP when credentials are configured. Completing this for production use is a v0.3.0 milestone.
 
 ## Development
 
