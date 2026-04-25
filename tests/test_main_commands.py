@@ -112,7 +112,9 @@ def test_cmd_daily_borderline_item_is_logged_only(tmp_path, monkeypatch) -> None
     assert log_entry["deadline"] is not None
 
 
-def test_cmd_review_logged_prints_flagged_and_borderline(tmp_path, monkeypatch, capsys) -> None:
+def test_cmd_review_logged_shows_borderline_and_excludes_flagged_and_old(
+    tmp_path, monkeypatch, capsys
+) -> None:
     _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
@@ -133,9 +135,9 @@ def test_cmd_review_logged_prints_flagged_and_borderline(tmp_path, monkeypatch, 
         },
         {
             "timestamp": (now - timedelta(days=10)).isoformat(),
-            "title": "Vanha",
-            "score": 9,
-            "rationale": "Ei pitaisi nayttaa",
+            "title": "Vanha rajatapaus",
+            "score": 5,
+            "rationale": "Vanhentunut",
         },
     ]
     score_log_path.write_text(
@@ -145,11 +147,11 @@ def test_cmd_review_logged_prints_flagged_and_borderline(tmp_path, monkeypatch, 
 
     main.cmd_review_logged(days=7)
     out = capsys.readouterr().out
-    assert "FLAGGED" in out
     assert "LOGGED" in out
-    assert "Nostettava" in out
+    assert "FLAGGED" not in out
     assert "Rajalla" in out
-    assert "Vanha" not in out
+    assert "Nostettava" not in out
+    assert "Vanha rajatapaus" not in out
 
 
 def test_cmd_update_context_fetches_and_saves(monkeypatch) -> None:
@@ -336,7 +338,7 @@ def test_cmd_review_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:
     assert "No score log found." in out
 
 
-def test_cmd_review_logged_prints_only_flagged_section(tmp_path, monkeypatch, capsys) -> None:
+def test_cmd_review_logged_only_flagged_in_log_reports_empty(tmp_path, monkeypatch, capsys) -> None:
     _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
@@ -348,11 +350,12 @@ def test_cmd_review_logged_prints_only_flagged_section(tmp_path, monkeypatch, ca
 
     main.cmd_review_logged(days=7)
     out = capsys.readouterr().out
-    assert "FLAGGED" in out
+    assert "No borderline items" in out
     assert "LOGGED" not in out
+    assert "Nostettava" not in out
 
 
-def test_cmd_review_logged_prints_only_borderline_section(tmp_path, monkeypatch, capsys) -> None:
+def test_cmd_review_logged_prints_borderline_section(tmp_path, monkeypatch, capsys) -> None:
     _seen_path, score_log_path, _flagged_path, _context_path = _setup_state_paths(
         tmp_path, monkeypatch
     )
@@ -364,8 +367,8 @@ def test_cmd_review_logged_prints_only_borderline_section(tmp_path, monkeypatch,
 
     main.cmd_review_logged(days=7)
     out = capsys.readouterr().out
-    assert "FLAGGED" not in out
     assert "LOGGED" in out
+    assert "Rajalla" in out
 
 
 def test_cmd_preview_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:

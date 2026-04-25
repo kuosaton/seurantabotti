@@ -214,6 +214,7 @@ def cmd_daily(dry_run: bool) -> None:
             _record_result(p, result, notified, seen)
 
             if score >= config.NOTIFY_THRESHOLD:
+                print(f"  [FLAG {score}/10] {p.title}")
                 flagged.append({"proposal": p, **result})
                 _append_flagged(
                     {
@@ -262,7 +263,6 @@ def cmd_review_logged(days: int = 7) -> None:
         return
 
     cutoff = datetime.now(UTC).timestamp() - days * 86400
-    flagged = []
     borderline = []
 
     with config.SCORE_LOG_PATH.open(encoding="utf-8") as f:
@@ -278,30 +278,20 @@ def cmd_review_logged(days: int = 7) -> None:
             ts = datetime.fromisoformat(entry["timestamp"].rstrip("Z")).replace(tzinfo=UTC)
             if ts.timestamp() < cutoff:
                 continue
-            if score >= config.NOTIFY_THRESHOLD:
-                flagged.append(entry)
-            elif score >= config.LOG_THRESHOLD:
+            if config.LOG_THRESHOLD <= score < config.NOTIFY_THRESHOLD:
                 borderline.append(entry)
 
-    def _print_entries(entries: list[dict]) -> None:
-        for entry in entries:
-            print(f"[{entry['score']}/10] {entry['timestamp'][:10]}  {entry['title']}")
-            print(f"  {entry.get('rationale', '')}")
-            print()
-
-    if not flagged and not borderline:
-        print(f"No scored items above threshold in the last {days} days.")
+    if not borderline:
+        print(f"No borderline items in the last {days} days.")
         return
 
-    if flagged:
-        print(f"--- FLAGGED ({len(flagged)} items, score ≥{config.NOTIFY_THRESHOLD}) ---\n")
-        _print_entries(flagged)
-
-    if borderline:
-        print(
-            f"--- LOGGED ({len(borderline)} items, score {config.LOG_THRESHOLD}-{config.NOTIFY_THRESHOLD - 1}) ---\n"
-        )
-        _print_entries(borderline)
+    print(
+        f"--- LOGGED ({len(borderline)} items, score {config.LOG_THRESHOLD}-{config.NOTIFY_THRESHOLD - 1}) ---\n"
+    )
+    for entry in borderline:
+        print(f"[{entry['score']}/10] {entry['timestamp'][:10]}  {entry['title']}")
+        print(f"  {entry.get('rationale', '')}")
+        print()
 
 
 def cmd_preview_flagged() -> None:

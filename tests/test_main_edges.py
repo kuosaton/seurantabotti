@@ -112,7 +112,7 @@ def test_cmd_review_logged_skips_blank_and_invalid_json(tmp_path, monkeypatch, c
 
     main.cmd_review_logged(days=7)
     out = capsys.readouterr().out
-    assert "No scored items above threshold" in out
+    assert "No borderline items" in out
 
 
 def test_cmd_preview_flagged_empty_list_branch(tmp_path, monkeypatch, capsys) -> None:
