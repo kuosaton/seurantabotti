@@ -1,14 +1,7 @@
 # seurantabotti (monitoring bot)
 
-[![CI](https://github.com/kuosaton/seurantabotti/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kuosaton/seurantabotti/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/kuosaton/seurantabotti/graph/badge.svg?token=DM3PJTS30G)](https://codecov.io/gh/kuosaton/seurantabotti) [![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fkuosaton%2Fseurantabotti%2Frefs%2Fheads%2Fmain%2Fpyproject.toml&logo=python&logoColor=white
-)](https://www.python.org/)
-[![uv package manager](https://img.shields.io/badge/uv-package%20manager?logo=uv&label=package%20manager&color=%23DE5FE9
-)](https://docs.astral.sh/uv/)
-
-
-
-
-
+[![CI](https://github.com/kuosaton/seurantabotti/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kuosaton/seurantabotti/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/kuosaton/seurantabotti/graph/badge.svg?token=DM3PJTS30G)](https://codecov.io/gh/kuosaton/seurantabotti) [![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fkuosaton%2Fseurantabotti%2Frefs%2Fheads%2Fmain%2Fpyproject.toml&logo=python&logoColor=white)](https://www.python.org/)
+[![uv package manager](https://img.shields.io/badge/uv-package%20manager?logo=uv&label=package%20manager&color=%23DE5FE9)](https://docs.astral.sh/uv/)
 
 Helps [Kuluttajaliitto](https://www.kuluttajaliitto.fi/) (The Consumers’ Union of Finland) keep up with [lausuntopalvelu.fi](https://www.lausuntopalvelu.fi), the Finnish public administration's portal for consulting the public on draft proposals and decisions.
 
