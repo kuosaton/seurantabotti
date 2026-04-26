@@ -3,48 +3,30 @@ from __future__ import annotations
 from datetime import date, datetime
 from types import SimpleNamespace
 
+import resend
+
 import delivery.email as email_mod
 
 
-def test_send_email_uses_smtp_flow(monkeypatch) -> None:
-    calls: dict = {}
+def test_send_email_uses_resend(monkeypatch) -> None:
 
-    class FakeSMTP:
-        def __init__(self, host, port):
-            calls["host"] = host
-            calls["port"] = port
+    captured: dict = {}
 
-        def __enter__(self):
-            return self
+    def fake_send(params):
+        captured.update(params)
+        return {"id": "fake-id-123"}
 
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-        def starttls(self):
-            calls["starttls"] = True
-
-        def login(self, user, password):
-            calls["login"] = (user, password)
-
-        def send_message(self, msg):
-            calls["subject"] = msg["Subject"]
-            calls["to"] = msg["To"]
-
-    monkeypatch.setattr(email_mod.smtplib, "SMTP", FakeSMTP)
-    monkeypatch.setattr(email_mod, "_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr(email_mod, "_SMTP_PORT", 2525)
+    monkeypatch.setattr(resend.Emails, "send", staticmethod(fake_send))
+    monkeypatch.setenv("SENDER_EMAIL", "botti@example.com")
     monkeypatch.setenv("RECIPIENT_EMAIL", "vastaanottaja@example.com")
-    monkeypatch.setenv("SMTP_USER", "lahettaja@example.com")
-    monkeypatch.setenv("SMTP_PASS", "salasana")
 
     email_mod.send_email(subject="Testisubject", html_body="<p>Hei</p>", text_body="Hei")
 
-    assert calls["host"] == "smtp.example.com"
-    assert calls["port"] == 2525
-    assert calls["starttls"] is True
-    assert calls["login"] == ("lahettaja@example.com", "salasana")
-    assert calls["subject"] == "Testisubject"
-    assert calls["to"] == "vastaanottaja@example.com"
+    assert captured["from"] == "botti@example.com"
+    assert captured["to"] == ["vastaanottaja@example.com"]
+    assert captured["subject"] == "Testisubject"
+    assert captured["html"] == "<p>Hei</p>"
+    assert captured["text"] == "Hei"
 
 
 def test_build_daily_digest_contains_key_fields() -> None:
@@ -103,7 +85,7 @@ def test_build_daily_digest_sorts_by_score_descending() -> None:
 
 
 def test_build_daily_digest_sorts_by_deadline_within_same_score() -> None:
-    def _proposal(title: str, deadline: datetime) -> SimpleNamespace:
+    def _proposal(title: str, deadline: datetime | None) -> SimpleNamespace:
         return SimpleNamespace(
             title=title,
             organization_name="Org",

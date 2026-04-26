@@ -4,10 +4,12 @@ import json
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 
+import resend
+
 import config
+import delivery.email as email_mod
 import main
 from clients.lausuntopalvelu import Proposal
-import delivery.email as email_mod
 from processing import llm_scorer
 
 
@@ -121,37 +123,17 @@ def test_llm_scorer_client_is_created_lazily_once(monkeypatch) -> None:
 
 
 def test_send_email_reads_env_defaults_at_call_time(monkeypatch) -> None:
-    monkeypatch.setenv("RECIPIENT_EMAIL", "to@example.com")
-    monkeypatch.setenv("SMTP_USER", "user@example.com")
-    monkeypatch.setenv("SMTP_PASS", "secret")
+    monkeypatch.setenv("SENDER_EMAIL", "sender@example.com")
+    monkeypatch.setenv("RECIPIENT_EMAIL", "recipient@example.com")
+    monkeypatch.setenv("RESEND_API_KEY", "re_test_key")
 
-    calls: dict = {}
-
-    class FakeSMTP:
-        def __init__(self, host, port):
-            calls["host"] = host
-            calls["port"] = port
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-        def starttls(self):
-            calls["starttls"] = True
-
-        def login(self, user, password):
-            calls["login"] = (user, password)
-
-        def send_message(self, msg):
-            calls["to"] = msg["To"]
-            calls["from"] = msg["From"]
-
-    monkeypatch.setattr(email_mod.smtplib, "SMTP", FakeSMTP)
+    captured: dict = {}
+    monkeypatch.setattr(
+        resend.Emails, "send", staticmethod(lambda p: captured.update(p) or {"id": "x"})
+    )
 
     email_mod.send_email(subject="s", html_body="<p>x</p>", text_body="x")
 
-    assert calls["to"] == "to@example.com"
-    assert calls["from"] == "user@example.com"
-    assert calls["login"] == ("user@example.com", "secret")
+    assert captured["from"] == "sender@example.com"
+    assert captured["to"] == ["recipient@example.com"]
+    assert resend.api_key == "re_test_key"

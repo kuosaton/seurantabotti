@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 import os
-import smtplib
 from datetime import date, datetime
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+
+import resend
 
 from config import COMMITTEE_DISPLAY_NAMES
-
-_SMTP_HOST = "smtp.gmail.com"
-_SMTP_PORT = 587
 
 
 def _fmt_date(d: date | datetime) -> str:
@@ -46,22 +42,26 @@ def _deadline_html(deadline: date | datetime | None) -> str:
     return f'{date_str} <span style="{style}">({days} pv)</span>'
 
 
-def send_email(subject: str, html_body: str, text_body: str) -> None:
-    to = os.environ.get("RECIPIENT_EMAIL", "")
-    smtp_user = os.environ.get("SMTP_USER", "")
-    smtp_pass = os.environ.get("SMTP_PASS", "")
+def send_email(subject: str, html_body: str, text_body: str = "") -> None:
+    resend.api_key = os.environ.get("RESEND_API_KEY")
+    sender_email = os.environ.get("SENDER_EMAIL", "")
+    recipient_email = os.environ.get("RECIPIENT_EMAIL", "")
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = smtp_user
-    msg["To"] = to
-    msg.attach(MIMEText(text_body, "plain", "utf-8"))
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
+    params: resend.Emails.SendParams = {
+        "from": sender_email,
+        "to": [recipient_email],
+        "subject": subject,
+        "html": html_body,
+        "text": text_body,
+    }
 
-    with smtplib.SMTP(_SMTP_HOST, _SMTP_PORT) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.send_message(msg)
+    try:
+        result = resend.Emails.send(params)
+        print("Email sent successfully!")
+        print(f"Email ID: {result['id']}")
+        print(f"Email: {result}")
+    except Exception as e:
+        print(f"Error sending email: {e}")
 
 
 # ---------------------------------------------------------------------------
