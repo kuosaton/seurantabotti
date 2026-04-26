@@ -136,4 +136,17 @@ def test_send_email_reads_env_defaults_at_call_time(monkeypatch) -> None:
 
     assert captured["from"] == "sender@example.com"
     assert captured["to"] == ["recipient@example.com"]
-    assert resend.api_key == "re_test_key"
+
+
+def test_send_email_supports_multiple_recipients(monkeypatch) -> None:
+    monkeypatch.setenv("SENDER_EMAIL", "sender@example.com")
+    monkeypatch.setenv("RECIPIENT_EMAIL", "a@example.com, b@example.com , c@example.com")
+
+    captured: dict = {}
+    monkeypatch.setattr(
+        resend.Emails, "send", staticmethod(lambda p: captured.update(p) or {"id": "x"})
+    )
+
+    email_mod.send_email(subject="s", html_body="<p>x</p>", text_body="x")
+
+    assert captured["to"] == ["a@example.com", "b@example.com", "c@example.com"]

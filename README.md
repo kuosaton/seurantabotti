@@ -91,7 +91,7 @@ Edit `.env` with your values:
 | `ANTHROPIC_API_KEY` | Anthropic API key                                       |
 | `RESEND_API_KEY`    | Resend API key for email sending                        |
 | `SENDER_EMAIL`      | From address (must be on a domain verified with Resend) |
-| `RECIPIENT_EMAIL`   | Address to deliver digests to                           |
+| `RECIPIENT_EMAIL`   | Comma-separated recipient addresses for digests         |
 
 #### 3. Fetch up-to-date Kuluttajaliitto published statements context (required before first run)
 

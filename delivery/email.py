@@ -45,11 +45,11 @@ def _deadline_html(deadline: date | datetime | None) -> str:
 def send_email(subject: str, html_body: str, text_body: str = "") -> None:
     resend.api_key = os.environ.get("RESEND_API_KEY")
     sender_email = os.environ.get("SENDER_EMAIL", "")
-    recipient_email = os.environ.get("RECIPIENT_EMAIL", "")
+    recipients = [a.strip() for a in os.environ.get("RECIPIENT_EMAIL", "").split(",") if a.strip()]
 
     params: resend.Emails.SendParams = {
         "from": sender_email,
-        "to": [recipient_email],
+        "to": recipients,
         "subject": subject,
         "html": html_body,
         "text": text_body,
