@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
+import httpx
 
 import clients.kuluttajaliitto as kk
 
@@ -26,20 +26,24 @@ def test_fetch_statements_parses_wp_response() -> None:
         {"id": 9999, "name": "kuluttajansuoja"},
     ]
 
-    calls = []
+    calls: list[str] = []
 
-    class FakeClient:
-        def get(self, url, params, timeout):
-            calls.append(url)
-            if url == kk.WP_API:
-                assert params["artikkelin_tyyppi"] == 8
-                assert params["per_page"] == 10
-                assert timeout == 20
-                return SimpleNamespace(raise_for_status=lambda: None, json=lambda: posts_payload)
-            if url == kk.WP_TAGS_API:
-                return SimpleNamespace(raise_for_status=lambda: None, json=lambda: tags_payload)
+    class _Transport(httpx.BaseTransport):
+        def handle_request(self, request: httpx.Request) -> httpx.Response:
+            base_url = str(request.url).split("?")[0]
+            calls.append(base_url)
+            if base_url == kk.WP_API:
+                assert request.url.params["artikkelin_tyyppi"] == "8"
+                assert request.url.params["per_page"] == "10"
+                assert request.extensions["timeout"]["read"] == 20.0
+                return httpx.Response(200, json=posts_payload)
+            if base_url == kk.WP_TAGS_API:
+                return httpx.Response(200, json=tags_payload)
+            return httpx.Response(404)
 
-    items = kk.fetch_statements(FakeClient(), per_page=10)
+    with httpx.Client(transport=_Transport()) as client:
+        items = kk.fetch_statements(client, per_page=10)
+
     assert len(items) == 1
     assert items[0].id == 123
     assert items[0].date == "2026-04-20"

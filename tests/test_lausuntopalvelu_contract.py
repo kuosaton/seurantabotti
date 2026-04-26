@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
+
+import httpx
 
 import clients.lausuntopalvelu as lapa
 
@@ -15,15 +16,16 @@ def test_fetch_recent_contract_against_recorded_feed_fixture() -> None:
         (_FIXTURE_DIR / "proposals_feed_expected.json").read_text(encoding="utf-8")
     )
 
-    class FakeClient:
-        def get(self, url, params, timeout):
-            assert url.endswith("/Proposals")
-            assert params["$orderby"] == "PublishedOn desc"
-            assert params["$top"] == "2"
-            assert timeout == 20
-            return SimpleNamespace(text=xml, raise_for_status=lambda: None)
+    class _Transport(httpx.BaseTransport):
+        def handle_request(self, request: httpx.Request) -> httpx.Response:
+            assert str(request.url).split("?")[0].endswith("/Proposals")
+            assert request.url.params["$orderby"] == "PublishedOn desc"
+            assert request.url.params["$top"] == "2"
+            assert request.extensions["timeout"]["read"] == 20.0
+            return httpx.Response(200, text=xml)
 
-    items = lapa.fetch_recent(FakeClient(), top=2)
+    with httpx.Client(transport=_Transport()) as client:
+        items = lapa.fetch_recent(client, top=2)
     serialized = [
         {
             "id": p.id,

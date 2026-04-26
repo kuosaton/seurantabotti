@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from hypothesis import given, settings
@@ -157,7 +158,7 @@ _SAFE_TEXT = st.text(
         }
     )
 )
-def test_parse_response_json_property_fuzz_wrappers(case: dict[str, object]) -> None:
+def test_parse_response_json_property_fuzz_wrappers(case: dict[str, Any]) -> None:
     score = int(case["score"])
     rationale = str(case["rationale"])
     themes = [str(x) for x in case["themes"]]

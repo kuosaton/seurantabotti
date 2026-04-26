@@ -41,8 +41,8 @@ branch = true
 [tool.pyright]
 pythonVersion = "3.14"
 typeCheckingMode = "basic"
-include = ["main.py", "config.py", "clients", "delivery", "processing"]
-exclude = ["tests", "**/__pycache__", "**/.*", ".venv", "mutants", "**/node_modules"]
+include = ["main.py", "config.py", "clients", "delivery", "processing", "tests", "scripts"]
+exclude = ["**/__pycache__", "**/.*", ".venv", "mutants", "**/node_modules"]
 reportMissingTypeStubs = false
 strict = ["processing"]
 

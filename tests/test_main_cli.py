@@ -195,8 +195,8 @@ def test_interactive_menu_choice_reset_state(monkeypatch) -> None:
     def mock_reset():
         called["reset"] = True
 
-    # Simulate choosing "8" (reset state) then "0" (exit)
-    inputs = ["8", "0"]
+    # Simulate choosing "9" (reset state) then "0" (exit)
+    inputs = ["9", "0"]
     input_iter = iter(inputs)
 
     def mock_input(prompt):
@@ -211,6 +211,29 @@ def test_interactive_menu_choice_reset_state(monkeypatch) -> None:
 
     main.main()
     assert called["reset"] is True
+
+
+def test_interactive_menu_choice_send_flagged(monkeypatch) -> None:
+    called = {"sent": False}
+
+    def mock_send_flagged(dry_run):
+        called["sent"] = True
+
+    inputs = ["8", "0"]
+    input_iter = iter(inputs)
+
+    def mock_input(prompt):
+        val = next(input_iter)
+        if prompt.strip() == ">":
+            return val
+        return "y"
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    monkeypatch.setattr(main, "cmd_send_flagged", mock_send_flagged)
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    main.main()
+    assert called["sent"] is True
 
 
 def test_interactive_menu_invalid_choice(monkeypatch) -> None:
@@ -302,6 +325,7 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
         "midweek": 0,
         "review_logged": 0,
         "preview": 0,
+        "send_flagged": 0,
         "preview_logged": 0,
     }
 
@@ -320,6 +344,9 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
     )
     monkeypatch.setattr(main, "cmd_preview_flagged", lambda: called.__setitem__("preview", 1))
     monkeypatch.setattr(
+        main, "cmd_send_flagged", lambda dry_run: called.__setitem__("send_flagged", int(dry_run))
+    )
+    monkeypatch.setattr(
         main, "cmd_preview_logged", lambda days: called.__setitem__("preview_logged", days)
     )
     monkeypatch.setattr(
@@ -334,6 +361,7 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
             "--days",
             "3",
             "--preview-flagged",
+            "--send-flagged",
             "--preview-logged",
             "--dry-run",
         ],
@@ -347,6 +375,7 @@ def test_main_dispatches_all_selected_flags(monkeypatch) -> None:
     assert called["midweek"] == 1
     assert called["review_logged"] == 3
     assert called["preview"] == 1
+    assert called["send_flagged"] == 1
     assert called["preview_logged"] == 3
 
 

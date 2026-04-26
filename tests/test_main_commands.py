@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 
 import config
 import main
@@ -319,12 +320,38 @@ def test_cmd_daily_dry_run_prints_digest_but_does_not_send(tmp_path, monkeypatch
 
     main.cmd_daily(dry_run=True)
     out = capsys.readouterr().out
-    assert "--- DRY RUN: would send email ---" in out
     assert "Subject: SUB" in out
     assert "TEXT BODY" in out
+    assert "--- DRY RUN: would send email ---" in out
 
     seen = json.loads(seen_path.read_text(encoding="utf-8"))
     assert seen["dryrun-1"]["notified"] is False
+
+
+def test_deliver_digest_aborts_when_send_declined(monkeypatch, capsys) -> None:
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+
+    sent = {"called": False}
+    flagged = [
+        {
+            "proposal": SimpleNamespace(
+                title="T", organization_name="O", published_on=None, deadline=None, url=""
+            ),
+            "score": 7,
+            "rationale": "R",
+            "themes": [],
+        }
+    ]
+    monkeypatch.setattr(main, "build_daily_digest", lambda f: ("S", "<p>H</p>", "Body"))
+    monkeypatch.setattr(
+        main, "send_email", lambda subject, html_body, text_body: sent.__setitem__("called", True)
+    )
+
+    main._deliver_digest(flagged, dry_run=False)
+
+    out = capsys.readouterr().out
+    assert "Aborted." in out
+    assert not sent["called"]
 
 
 def test_cmd_review_logged_no_log_file(tmp_path, monkeypatch, capsys) -> None:

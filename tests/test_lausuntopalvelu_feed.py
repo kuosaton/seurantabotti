@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
-from types import SimpleNamespace
+
+import httpx
 
 import clients.lausuntopalvelu as lapa
 
@@ -37,16 +38,14 @@ def test_fetch_recent_parses_atom_feed() -> None:
     </feed>
     """
 
-    class FakeClient:
-        def get(self, url, params, timeout):
-            assert url.endswith("/Proposals")
-            assert params["$top"] == "1"
-            return SimpleNamespace(
-                text=xml,
-                raise_for_status=lambda: None,
-            )
+    class _Transport(httpx.BaseTransport):
+        def handle_request(self, request: httpx.Request) -> httpx.Response:
+            assert str(request.url).split("?")[0].endswith("/Proposals")
+            assert request.url.params["$top"] == "1"
+            return httpx.Response(200, text=xml)
 
-    items = lapa.fetch_recent(FakeClient(), top=1)
+    with httpx.Client(transport=_Transport()) as client:
+        items = lapa.fetch_recent(client, top=1)
     assert len(items) == 1
     p = items[0]
     assert p.id == "abc-123"
