@@ -9,7 +9,7 @@ Lausuntopalvelu publishes hundreds of new requests for comment (lausuntopyyntö)
 
 Lausuntobotti helps cut through the noise by assessing the relevancy of open requests with [Claude](https://claude.com/product/overview), highlighting the most relevant ones, and bringing the chosen recipient(s) up to speed via email digests.
 
-<p align="center"> <img src=".github/assets/lausuntobotti_digest_example.png" width="800px" alt="Lausuntobotti email digest example"></p>
+<p align="center"> <img src=".github/assets/lausuntobotti_digest_example.png" width="700px" alt="Lausuntobotti email digest example"></p>
 
 ## How it works
 
