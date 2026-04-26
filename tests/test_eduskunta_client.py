@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 
+import httpx
 import pytest
 
 from clients.eduskunta import (
@@ -83,18 +83,15 @@ def test_parse_agenda_matters_skips_referenced_statements() -> None:
 
 
 def test_fetch_committee_page_sends_browser_user_agent() -> None:
-    captured: dict = {}
+    class _Transport(httpx.BaseTransport):
+        def handle_request(self, request: httpx.Request) -> httpx.Response:
+            assert str(request.url) == "https://example.invalid/tav"
+            assert request.headers["user-agent"] == HEADERS["User-Agent"]
+            return httpx.Response(200, text="<html>ok</html>")
 
-    class FakeClient:
-        def get(self, url, **kwargs):
-            captured["url"] = url
-            captured["kwargs"] = kwargs
-            return SimpleNamespace(raise_for_status=lambda: None, text="<html>ok</html>")
-
-    body = fetch_committee_page(FakeClient(), "https://example.invalid/tav")
+    with httpx.Client(transport=_Transport()) as client:
+        body = fetch_committee_page(client, "https://example.invalid/tav")
     assert body == "<html>ok</html>"
-    assert captured["url"] == "https://example.invalid/tav"
-    assert captured["kwargs"]["headers"] == HEADERS
     assert "Mozilla" in HEADERS["User-Agent"]
 
 
@@ -108,28 +105,27 @@ def test_fetch_agenda_xml_picks_latest_by_created() -> None:
         ],
         "hasMore": False,
     }
-    captured: dict = {}
 
-    class FakeClient:
-        def get(self, url, **kwargs):
-            captured["url"] = url
-            captured["kwargs"] = kwargs
-            return SimpleNamespace(raise_for_status=lambda: None, json=lambda: response)
+    class _Transport(httpx.BaseTransport):
+        def handle_request(self, request: httpx.Request) -> httpx.Response:
+            assert str(request.url).split("?")[0] == VASKI_URL
+            assert request.url.params["columnName"] == "Eduskuntatunnus"
+            assert request.url.params["columnValue"] == "TaVE 1/2026 vp"
+            assert request.headers["user-agent"] == HEADERS["User-Agent"]
+            return httpx.Response(200, json=response)
 
-    xml = fetch_agenda_xml(FakeClient(), "TaVE 1/2026 vp")
+    with httpx.Client(transport=_Transport()) as client:
+        xml = fetch_agenda_xml(client, "TaVE 1/2026 vp")
     assert xml == "<latest/>"
-    assert captured["url"] == VASKI_URL
-    assert captured["kwargs"]["params"]["columnName"] == "Eduskuntatunnus"
-    assert captured["kwargs"]["params"]["columnValue"] == "TaVE 1/2026 vp"
-    assert captured["kwargs"]["headers"] == HEADERS
 
 
 def test_fetch_agenda_xml_raises_on_empty_rows() -> None:
     response = {"columnNames": ["Id", "XmlData", "Created", "Eduskuntatunnus"], "rowData": []}
 
-    class FakeClient:
-        def get(self, url, **kwargs):
-            return SimpleNamespace(raise_for_status=lambda: None, json=lambda: response)
+    class _Transport(httpx.BaseTransport):
+        def handle_request(self, _request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json=response)
 
-    with pytest.raises(LookupError, match="No VaskiData rows"):
-        fetch_agenda_xml(FakeClient(), "TaVE 999/2026 vp")
+    with httpx.Client(transport=_Transport()) as client:
+        with pytest.raises(LookupError, match="No VaskiData rows"):
+            fetch_agenda_xml(client, "TaVE 999/2026 vp")
