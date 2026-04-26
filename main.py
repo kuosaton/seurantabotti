@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import sys
+from collections.abc import Callable
 from datetime import UTC, datetime
 from datetime import date as date_type
 from pathlib import Path
@@ -144,16 +145,21 @@ def _record_result(p: Proposal, result: dict, notified: bool, seen: dict) -> Non
 
 def _deliver_digest(flagged: list[dict], dry_run: bool) -> None:
     print(f"\n{len(flagged)} item(s) above threshold:")
-    for item in flagged:
+    for item in sorted(flagged, key=lambda x: -x["score"]):
         print(f"  [{item['score']}/10] {item['proposal'].title}")
     subject, html_body, text_body = build_daily_digest(flagged)
+    print(f"\nSubject: {subject}")
+    print(text_body)
     if dry_run:
         print("\n--- DRY RUN: would send email ---")
-        print(f"Subject: {subject}")
-        print(text_body)
-    else:
-        send_email(subject=subject, html_body=html_body, text_body=text_body)
-        print(f"Email sent to {os.environ.get('RECIPIENT_EMAIL', '?')}")
+        return
+    recipient = os.environ.get("RECIPIENT_EMAIL", "?")
+    answer = input(f"\nSend to {recipient}? [Y/n] ").strip().lower()
+    if answer != "y":
+        print("Aborted.")
+        return
+    send_email(subject=subject, html_body=html_body, text_body=text_body)
+    print(f"Email sent to {recipient}")
 
 
 def cmd_daily(dry_run: bool) -> None:
@@ -180,7 +186,7 @@ def cmd_daily(dry_run: bool) -> None:
         return
 
     answer = input(f"Score {len(new_proposals)} proposal(s)? [Y/n] ").strip().lower()
-    if answer not in ("y", ""):
+    if answer != "y":
         print("Aborted.")
         return
 
@@ -294,16 +300,10 @@ def cmd_review_logged(days: int = 7) -> None:
         print()
 
 
-def cmd_preview_flagged() -> None:
+def _load_flagged() -> list[dict]:
     if not config.FLAGGED_PATH.exists() or config.FLAGGED_PATH.stat().st_size <= 2:
-        print("No flagged items to preview.")
-        return
-
+        return []
     items = json.loads(config.FLAGGED_PATH.read_text(encoding="utf-8"))
-    if not items:
-        print("No flagged items to preview.")
-        return
-
     flagged = []
     for e in items:
         deadline = None
@@ -334,10 +334,25 @@ def cmd_preview_flagged() -> None:
                 "themes": e.get("themes", []),
             }
         )
+    return flagged
 
+
+def cmd_preview_flagged() -> None:
+    flagged = _load_flagged()
+    if not flagged:
+        print("No flagged items to preview.")
+        return
     subject, _html_body, text_body = build_daily_digest(flagged)
     print(f"Subject: {subject}\n")
     print(text_body)
+
+
+def cmd_send_flagged(dry_run: bool) -> None:
+    flagged = _load_flagged()
+    if not flagged:
+        print("No flagged items to send.")
+        return
+    _deliver_digest(flagged, dry_run)
 
 
 def cmd_preview_logged(days: int = 7) -> None:
@@ -431,9 +446,32 @@ Seurantabotti
 5  Review logged items (custom range)
 6  Preview flagged
 7  Preview logged (borderline)
-8  Reset state
+8  Send flagged (resend last digest)
+9  Reset state
+h  Help
 0  Exit
 ─────────────────────────────────────"""
+
+_HELP = """
+Option descriptions:
+  1  Daily check              Fetch new lausuntopalvelu proposals, score with Claude,
+                              and send email for items above threshold.
+  2  Daily check (dry run)    Same as above but print the digest instead of sending.
+  3  Update context           Re-fetch Kuluttajaliitto published statements used as
+                              scoring context. Run this before the first daily check
+                              and periodically to keep context current.
+  4  Review logged (7 days)   Print borderline items (score 4-6) from the last 7 days
+                              for manual calibration review.
+  5  Review logged (custom)   Same as above with a custom day range.
+  6  Preview flagged          Print the last flagged digest as plain text (no email).
+  7  Preview logged           Print borderline items as a formatted digest (no email).
+  8  Send flagged             Resend the last daily digest email without re-running
+                              scoring. Useful for testing email delivery.
+  9  Reset state              Erase all state files (seen proposals, score log,
+                              flagged items) and start fresh.
+  h  Help                     Show this help.
+  0  Exit
+"""
 
 
 def _menu_review_custom() -> None:
@@ -453,7 +491,7 @@ def _menu_preview_logged() -> None:
 
 
 def cmd_interactive() -> None:
-    actions: dict[str, object] = {
+    actions: dict[str, Callable[[], None]] = {
         "1": lambda: cmd_daily(dry_run=False),
         "2": lambda: cmd_daily(dry_run=True),
         "3": cmd_update_context,
@@ -461,7 +499,8 @@ def cmd_interactive() -> None:
         "5": _menu_review_custom,
         "6": cmd_preview_flagged,
         "7": _menu_preview_logged,
-        "8": cmd_reset_state,
+        "8": lambda: cmd_send_flagged(dry_run=False),
+        "9": cmd_reset_state,
     }
     print(_MENU)
     while True:
@@ -473,11 +512,14 @@ def cmd_interactive() -> None:
 
         if choice == "0":
             break
+        if choice == "h":
+            print(_HELP)
+            continue
         action = actions.get(choice)
         if action is None:
-            print(f"Unknown option: {choice!r}")
+            print(_HELP)
             continue
-        action()  # type: ignore[operator]
+        action()
         print(_MENU)
 
 
@@ -522,6 +564,11 @@ def main() -> None:
         help="Preview flagged items as an email digest",
     )
     parser.add_argument(
+        "--send-flagged",
+        action="store_true",
+        help="Resend the last daily digest without re-running scoring",
+    )
+    parser.add_argument(
         "--preview-logged",
         action="store_true",
         help="Preview borderline items from the score log as a formatted digest",
@@ -546,6 +593,7 @@ def main() -> None:
             args.update_context,
             args.review_logged,
             args.preview_flagged,
+            args.send_flagged,
             args.preview_logged,
             args.reset_state,
             args.interactive,
@@ -571,6 +619,9 @@ def main() -> None:
 
     if args.preview_flagged:
         cmd_preview_flagged()
+
+    if args.send_flagged:
+        cmd_send_flagged(dry_run=args.dry_run)
 
     if args.preview_logged:
         cmd_preview_logged(days=args.days)
