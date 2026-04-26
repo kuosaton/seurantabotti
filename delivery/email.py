@@ -59,7 +59,7 @@ def send_email(subject: str, html_body: str, text_body: str = "") -> None:
         result = resend.Emails.send(params)
         print("Email sent successfully!")
         print(f"Email ID: {result['id']}")
-        print(f"Email: {result}")
+
     except Exception as e:
         print(f"Error sending email: {e}")
 
@@ -136,7 +136,10 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
   <p style="color:#666;margin-top:0;">{today} &mdash; {count} uutta ehdotusta</p>
   {item_html}
   <hr style="border:none;border-top:1px solid #ddd;margin:32px 0 16px;">
-  <p style="font-size:11px;color:#aaa;">Seurantabotti</p>
+  <p style="font-size:11px;color:#aaa;">
+    Seurantabotti &middot; <a href="https://github.com/kuosaton/seurantabotti" target="_blank" style="color:#aaa;">GitHub</a>
+    &middot; Palautetta, kommentteja? Voit vastata suoraan tähän viestiin.
+  </p>
 </body>
 </html>"""
 
@@ -228,7 +231,10 @@ def build_weekly_digest(
     Arvioitu: {total_scored} asiaa &mdash; Nostettu: {total_flagged} &mdash;
     Lokitettu (4-6): {total_logged}
   </p>
-  <p style="font-size:11px;color:#aaa;">Seurantabotti</p>
+  <p style="font-size:11px;color:#aaa;">
+    Seurantabotti &middot; <a href="https://github.com/kuosaton/seurantabotti" target="_blank" style="color:#aaa;">GitHub</a>
+    &middot; Palautetta, kommentteja? Voit vastata suoraan tähän viestiin.
+  </p>
 </body>
 </html>"""
     return subject, html_body, text_body
