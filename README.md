@@ -1,4 +1,4 @@
-# Lausuntobotti (monitoring bot)
+# Lausuntobotti
 
 [![CI](https://github.com/kuosaton/lausuntobotti/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kuosaton/lausuntobotti/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/kuosaton/lausuntobotti/graph/badge.svg?token=DM3PJTS30G)](https://codecov.io/gh/kuosaton/lausuntobotti) [![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fkuosaton%2Flausuntobotti%2Frefs%2Fheads%2Fmain%2Fpyproject.toml&logo=python&logoColor=white)](https://www.python.org/)
 [![uv package manager](https://img.shields.io/badge/uv-package%20manager?logo=uv&label=package%20manager&color=%23DE5FE9)](https://docs.astral.sh/uv/)
@@ -7,14 +7,9 @@ A large language model-based tool to help [Kuluttajaliitto](https://www.kuluttaj
 
 Lausuntopalvelu publishes hundreds of new requests for comment (lausuntopyyntö) every month, and manually reviewing them all to spot the ones worth responding to is time-consuming.
 
-Lausuntobotti helps cut through the noise by assessing the relevancy of open requests with [Claude](https://claude.com/product/overview) and highlighting the most relevant ones, with support for email digests via [Resend](https://resend.com/).
+Lausuntobotti helps cut through the noise by assessing the relevancy of open requests with [Claude](https://claude.com/product/overview), highlighting the most relevant ones, and bringing the chosen recipient(s) up to speed via email digests.
 
-## Table of contents
-
-1. [How it works](#how-it-works)
-2. [Usage](#usage)
-3. [Planned features](#planned-features)
-4. [Development](#development)
+![Lausuntobotti email digest example screenshot](.github/assets/lausuntobotti_digest_example.png)
 
 ## How it works
 
@@ -32,12 +27,12 @@ For new proposals, the bot:
 
 All data comes from publicly accessible sources:
 
-- **[lausuntopalvelu.fi Open API](https://www.lausuntopalvelu.fi/api/v1/Lausuntopalvelu.svc)**: the source of the proposals being assessed. New requests for comment are fetched via the site's public OData/Atom feed; each proposal's distribution list and prior responses are read from its public participation page.
-- **[kuluttajaliitto.fi WordPress API](https://www.kuluttajaliitto.fi/wp-json/)**: the source of the relevance context. Kuluttajaliitto's published statements are pulled from the site's public WordPress REST API and used as the corpus the scoring model compares new proposals against.
+- **[lausuntopalvelu.fi Open API](https://www.lausuntopalvelu.fi/api/v1/Lausuntopalvelu.svc)**: new requests for comment via the public OData/Atom feed; distribution lists and prior responses scraped from each proposal's participation page.
+- **[kuluttajaliitto.fi WordPress API](https://www.kuluttajaliitto.fi/wp-json/)**: Kuluttajaliitto's published statements, used as the corpus the scoring model compares new proposals against.
 
-### Scoring
+### Relevancy scoring
 
-Each proposal is scored on scale from 0 to 10 based on Kuluttajaliitto's previously published statements and areas of focus by the large language model [Claude Haiku 4.5](https://www.anthropic.com/news/claude-haiku-4-5). The model is given the following rubric:
+Each proposal is scored by [Claude Haiku 4.5](https://www.anthropic.com/news/claude-haiku-4-5) based on Kuluttajaliitto's previously published statements and areas of focus. The model is given the following rubric:
 
 | Score | Rubric                                                                                                                                                                               |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -46,13 +41,15 @@ Each proposal is scored on scale from 0 to 10 based on Kuluttajaliitto's previou
 | 2-4   | Thin connection to consumer matters.                                                                                                                                                 |
 | 0-1   | No discernible connection to consumers or Kuluttajaliitto's work.                                                                                                                    |
 
-The bot then acts on the score:
+The bot then acts on the score, printing a tag for each processed proposal:
 
-| Score | Action                                                         |
-| ----- | -------------------------------------------------------------- |
-| ≥ 6   | Flagged for review, included in the email digest               |
-| 4-5   | Logged as potentially interesting (lower confidence), no email |
-| 0-3   | Dropped silently                                               |
+| Score | Tag                 | Action                                                                           |
+| ----- | ------------------- | -------------------------------------------------------------------------------- |
+| –     | `SKIP DISTRIBUTION` | Kuluttajaliitto is on the proposal's distribution list (skipped without scoring) |
+| –     | `SKIP RESPONDED`    | Kuluttajaliitto has already submitted a response (skipped without scoring)       |
+| ≥ 6   | `FLAG x/10`         | Flagged for review, included in the email digest                                 |
+| 4-5   | `LOG x/10`          | Logged as potentially interesting (lower confidence), no email                   |
+| 0-3   | `DROP x/10`         | Dropped silently                                                                 |
 
 ## Usage
 
@@ -61,20 +58,14 @@ The bot then acts on the score:
 1. [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package and project manager)
 2. [Python 3.14](https://www.python.org/downloads/) (We recommend [using uv to install and manage Python versions](https://docs.astral.sh/uv/guides/install-python/).)
 3. A [Claude Console account](https://platform.claude.com/) & [API key](https://platform.claude.com/settings/keys)
-4. (Optional, for sending email digests:)
-   - A [Resend](https://resend.com/) account & [API key](https://resend.com/docs/dashboard/api-keys/introduction)
-   - A domain ([Resend sends email using a domain you own](https://resend.com/docs/dashboard/domains/introduction).)
-   - Note: These are only required for functions that send email (`--send-flagged` or `--daily` without the `--dry-run` flag). Other functionality will work regardless.
+4. **For sending email digests (optional):** a [Resend](https://resend.com/) account, [API key](https://resend.com/docs/dashboard/api-keys/introduction), and a domain ([Resend sends from a domain you own](https://resend.com/docs/dashboard/domains/introduction)). Other functionality works without these.
 
 > [!TIP]
 > If you do not have a domain, we recommend [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/) for at-cost domain registrations and renewals without extra fees, and other benefits like free DNS, CDN, and SSL. Resend offers an easy [auto setup process for Cloudflare domains](https://resend.com/docs/knowledge-base/cloudflare#automatic-setup-recommended).
 
 ### Setup
 
-#### 0. Get the source code
-
-- Download the [latest release](https://github.com/kuosaton/lausuntobotti/releases/latest) and extract the compressed files to a location of your choice.
-- Navigate to the repository root (`lausuntobotti/`).
+Download the [latest release](https://github.com/kuosaton/lausuntobotti/releases/latest), extract it, and `cd` into `lausuntobotti/`. Then:
 
 #### 1. Install the project dependencies
 
@@ -112,7 +103,7 @@ uv run python main.py --update-context
 uv run python main.py
 ```
 
-Launches an interactive menu for easy access to all commands. Choose from numbered options:
+Launches an interactive menu for easy access to all commands. Choose from the listed options:
 
 ```text
 Lausuntobotti
@@ -134,110 +125,17 @@ h  Help
 #### **Option B.** Basic command-line interface
 
 ```bash
-# Daily lausuntopalvelu.fi check – scores new proposals, sends email if threshold met
+# Daily check – score new proposals and send the digest if any clear the threshold
 uv run python main.py --daily
+uv run python main.py --daily --dry-run    # score and log, but don't send
 
-# Dry run – scores and logs but does not send email
-uv run python main.py --daily --dry-run
-
-# Refresh Kuluttajaliitto context from their website
-uv run python main.py --update-context
-
-# Review borderline items (score 4-5) from the last 7 days
-uv run python main.py --review-logged
-uv run python main.py --review-logged --days 14
-
-# Preview the flagged-items digest (without sending)
-uv run python main.py --preview-flagged
-
-# Resend the last daily digest without re-running scoring
-uv run python main.py --send-flagged
-uv run python main.py --send-flagged --dry-run
-
-# Preview borderline items from the score log as a formatted digest (without sending)
-uv run python main.py --preview-logged
-uv run python main.py --preview-logged --days 14
-
-# Erase all state files and start fresh
-uv run python main.py --reset-state
-```
-
-### Example output
-
-The snippets below use fabricated proposal titles and organisation names to keep the snapshot stable; real runs print the same shapes with live data.
-
-#### Daily check (`--daily --dry-run`)
-
-Fetches new proposals, asks for confirmation, scores each one, and prints the digest that _would_ be sent.
-
-```text
-Fetching lausuntopalvelu proposals...
-  50 fetched, 38 open, 6 new
-Score 7 proposal(s)? [Y/n] y
-  [SKIP DISTRIBUTION] Asetus elintarviketurvallisuuden valvonnasta
-  [SKIP RESPONDED] Hallituksen esitys kuluttajansuojalain muuttamisesta
-  [LOG 5/10] Hallituksen esitys laiksi etämyynnin tiedonantovelvoitteista
-  [DROP 0/10] Luonnos ydinvoimalaitosten teknisistä turvallisuusvaatimuksista
-  [FLAG 6/10] Asetus asuntolainojen ennenaikaisesta takaisinmaksusta
-  [FLAG 8/10] Hallituksen esitys verkkokaupan palautusoikeudesta
-  [LOG 4/10] Lakiluonnos rakennusvalvontamaksuista
-
-2 item(s) above threshold:
-  [8/10] Hallituksen esitys verkkokaupan palautusoikeudesta
-  [6/10] Asetus asuntolainojen ennenaikaisesta takaisinmaksusta
-
-Subject: Uusia lausuntopyyntöjä, 25.4.2026
-
-2 uutta lausuntopyyntöä, jotka saattavat kiinnostaa Kuluttajaliittoa (pisteet 6-8):
-
-────────────────────────────────────────────────────────────
-▸ [8/10] Luonnos hallituksen esitykseksi verkkokaupan palautusoikeudesta
-   Pyytäjä:   Esimerkkiministeriö
-   Julkaistu: 24.4.2026
-   Määräaika: 22.5.2026 (27 pv)
-   Asia koskee etämyynnin peruuttamisoikeutta ja verkkokaupan
-   kuluttajansuojaa, jotka ovat Kuluttajaliiton ydinaluetta.
-   Kuluttajaliitto on antanut aiheeseen liittyen useita lausuntoja
-   kuluttajansuojadirektiivin täytäntöönpanon yhteydessä.
-   Teemat:    verkkokauppa, etämyynti, peruuttamisoikeus, kuluttajansuoja
-   https://www.lausuntopalvelu.fi/FI/Proposal/Participation?proposalId=xxxx
-   ...
-
---- DRY RUN: would send email ---
-```
-
-Each listed proposal in the scoring loop is accompanied by a tag signifying the taken action:
-
-| Tag                 | Meaning                                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------------- |
-| `SKIP DISTRIBUTION` | Kuluttajaliitto is on the proposal's distribution list: skipped without scoring             |
-| `SKIP RESPONDED`    | Kuluttajaliitto has already submitted a response: skipped without scoring                   |
-| `FLAG x/10`         | Score at or above the notify threshold: included in the digest                              |
-| `LOG x/10`          | Score in the borderline band: recorded for `--review-logged` but not surfaced in the digest |
-| `DROP x/10`         | Score below the log threshold: not recorded                                                 |
-
-#### Review logged items (`--review-logged --days 7`)
-
-Prints proposals that fell into the borderline range and their scoring rationale. This can help answer questions, such as:
-
-- Did anything slip under the bar?
-- Why was a proposal with a relevant-sounding title not flagged?
-
-```text
---- LOGGED (2 items, score 4-5) ---
-
-[5/10] 2026-04-24  Hallituksen esitys laiksi etämyynnin tiedonantovelvoitteista
-  Sivuaa kuluttajansuojaa mutta painottuu yritysten velvoitteisiin.
-
-[4/10] 2026-04-22  Lakiluonnos rakennusvalvontamaksuista
-  Vaikutus kuluttajiin epäsuora rakentamisen kustannusten kautta.
+# Full list of commands (refresh context, preview/resend digests, review borderline, reset state)
+uv run python main.py --help
 ```
 
 ## Planned features
 
-### Parliamentary committee analysis (`--weekly`, `--midweek`)
-
-In addition to lausuntopalvelu.fi, Kuluttajaliitto needs to track proceedings in relevant parliamentary committees (talousvaliokunta, sosiaali- ja terveysvaliokunta). The planned `--weekly` and `--midweek` commands would score new committee items using the same Claude-based relevance model and deliver them in a weekly digest email.
+**Parliamentary committee analysis (`--weekly`, `--midweek`).** Kuluttajaliitto also needs to track proceedings in relevant parliamentary committees (talousvaliokunta, sosiaali- ja terveysvaliokunta). The planned commands would score new committee items using the same model and deliver them in a weekly digest.
 
 ## Development
 
@@ -272,6 +170,4 @@ All state lives under `state/`:
 
 ### About the development process
 
-This project was developed using [Claude Code](https://claude.ai/code) as the primary coding agent, built as a rapid prototype for Kuluttajaliitto with a deliberate focus on delivering something working quickly while maintaining reliability, security, and test coverage.
-
-The human developer directed the process: defining requirements with the client, making architectural and scoping decisions, reviewing all changes, gathering client feedback, and managing version control. Toolchain setup (migrating to uv and ruff, pinning dependencies with a 7-day expiry window on new releases to limit supply chain exposure, and hardening GitHub Actions) was also handled by the human.
+This project was built as a rapid prototype with [Claude Code](https://claude.ai/code) as the primary coding agent. The human developer defined requirements in collaboration with the client, made architectural and scoping decisions, reviewed all changes, and managed version control. Toolchain choices were also human-led: the move to uv and ruff, pinning dependencies with a 7-day expiry on new releases to limit supply chain exposure, and hardening GitHub Actions.
