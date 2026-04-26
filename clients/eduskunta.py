@@ -1,10 +1,10 @@
 """
-Committee monitoring client — Sprint 2.
+Committee monitoring client – Sprint 2.
 
 Pipeline (to be implemented):
   1. GET committee main page HTML (~3 MB, server-rendered SPA)
   2. Regex-extract VS (viikkosuunnitelma) and TaVE/MmVE/YmVE (esityslista) items
-     from the embedded JavaScript object literals (not valid JSON — keys unquoted)
+     from the embedded JavaScript object literals (not valid JSON – keys unquoted)
   3. For each new esityslista: fetch full XML from VaskiData by exact Eduskuntatunnus
   4. Parse matter references (HE/LA/etc.) and titles from XmlData column
   5. Score each matter via llm_scorer

@@ -133,7 +133,7 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
 <head><meta charset="utf-8"><title>{subject}</title></head>
 <body style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px;color:#222;">
   <h2 style="color:#1a56a0;margin-bottom:4px;">Uusia lausuntopyyntöjä</h2>
-  <p style="color:#666;margin-top:0;">{today} &mdash; {count} uutta ehdotusta</p>
+  <p style="color:#666;margin-top:0;">{today} &ndash; {count} uutta ehdotusta</p>
   {item_html}
   <hr style="border:none;border-top:1px solid #ddd;margin:32px 0 16px;">
   <p style="font-size:11px;color:#aaa;">
@@ -228,7 +228,7 @@ def build_weekly_digest(
   {sections_html}
   <hr style="border:none;border-top:1px solid #ddd;margin:32px 0 16px;">
   <p style="font-size:12px;color:#888;">
-    Arvioitu: {total_scored} asiaa &mdash; Nostettu: {total_flagged} &mdash;
+    Arvioitu: {total_scored} asiaa &ndash; Nostettu: {total_flagged} &ndash;
     Lokitettu (4-6): {total_logged}
   </p>
   <p style="font-size:11px;color:#aaa;">

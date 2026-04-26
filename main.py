@@ -529,7 +529,7 @@ def cmd_interactive() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seurantabotti — Kuluttajaliitto monitoring tool")
+    parser = argparse.ArgumentParser(description="Seurantabotti – Kuluttajaliitto monitoring tool")
     parser.add_argument("--daily", action="store_true", help="Run daily lausuntopalvelu check")
     parser.add_argument(
         "--weekly", action="store_true", help="Run weekly committee digest (Fridays)"

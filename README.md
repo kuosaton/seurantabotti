@@ -134,10 +134,10 @@ h  Help
 #### **Option B.** Basic command-line interface
 
 ```bash
-# Daily lausuntopalvelu.fi check — scores new proposals, sends email if threshold met
+# Daily lausuntopalvelu.fi check – scores new proposals, sends email if threshold met
 uv run python main.py --daily
 
-# Dry run — scores and logs but does not send email
+# Dry run – scores and logs but does not send email
 uv run python main.py --daily --dry-run
 
 # Refresh Kuluttajaliitto context from their website

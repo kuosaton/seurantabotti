@@ -18,7 +18,7 @@ SCORE_LOG_PATH = STATE_DIR / "score_log.jsonl"
 FLAGGED_PATH = STATE_DIR / "nostetut.json"
 CONTEXT_PATH = CONTEXT_DIR / "kuluttajaliitto.json"
 
-# Committee pages — these are the main pages that embed schedule + agenda data
+# Committee pages – these are the main pages that embed schedule + agenda data
 COMMITTEE_URLS = {
     "talousvaliokunta": "https://www.eduskunta.fi/kansanedustajat-ja-toimielimet/valiokunnat/talousvaliokunta",
     "maa_ja_metsatalousvaliokunta": "https://www.eduskunta.fi/kansanedustajat-ja-toimielimet/valiokunnat/maa-ja-metsatalousvaliokunta",

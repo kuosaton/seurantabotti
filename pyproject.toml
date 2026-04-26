@@ -31,8 +31,8 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "W", "F", "B", "PL", "UP"]
 ignore = [
-    "E501",    # line too long — HTML templates make this unavoidable
-    "PLR2004", # magic-value-comparison — noisy for test assertions and score checks
+    "E501",    # line too long – HTML templates make this unavoidable
+    "PLR2004", # magic-value-comparison – noisy for test assertions and score checks
 ]
 
 [tool.coverage.run]
