@@ -1,5 +1,5 @@
 """
-Committee monitoring client – Sprint 2.
+Committee (valiokunta) monitoring client – version 0.3.0
 
 Pipeline (to be implemented):
   1. GET committee main page HTML (~3 MB, server-rendered SPA)
@@ -18,4 +18,4 @@ Key facts verified 2026-04-22:
 - VaskiData base URL: https://avoindata.eduskunta.fi/api/v1
 """
 
-raise NotImplementedError("eduskunta client is scheduled for Sprint 2")
+raise NotImplementedError("Committee client is planned for version 0.3.0")

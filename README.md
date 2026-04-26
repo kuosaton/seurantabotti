@@ -1,13 +1,13 @@
-# seurantabotti (monitoring bot)
+# Lausuntobotti (monitoring bot)
 
-[![CI](https://github.com/kuosaton/seurantabotti/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kuosaton/seurantabotti/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/kuosaton/seurantabotti/graph/badge.svg?token=DM3PJTS30G)](https://codecov.io/gh/kuosaton/seurantabotti) [![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fkuosaton%2Fseurantabotti%2Frefs%2Fheads%2Fmain%2Fpyproject.toml&logo=python&logoColor=white)](https://www.python.org/)
+[![CI](https://github.com/kuosaton/lausuntobotti/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kuosaton/lausuntobotti/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/kuosaton/seurantabotti/graph/badge.svg?token=DM3PJTS30G)](https://codecov.io/gh/kuosaton/seurantabotti) [![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fkuosaton%2Flausuntobotti%2Frefs%2Fheads%2Fmain%2Fpyproject.toml&logo=python&logoColor=white)](https://www.python.org/)
 [![uv package manager](https://img.shields.io/badge/uv-package%20manager?logo=uv&label=package%20manager&color=%23DE5FE9)](https://docs.astral.sh/uv/)
 
 A large language model-based tool to help [Kuluttajaliitto](https://www.kuluttajaliitto.fi/) (The Consumers’ Union of Finland) keep up with [lausuntopalvelu.fi](https://www.lausuntopalvelu.fi), the Finnish public administration's portal for consulting the public on draft proposals and decisions.
 
 Lausuntopalvelu publishes hundreds of new requests for comment (lausuntopyyntö) every month, and manually reviewing them all to spot the ones worth responding to is time-consuming.
 
-Seurantabotti helps cut through the noise by assessing the relevancy of open requests with [Claude](https://claude.com/product/overview) and highlighting the most relevant ones, with support for email digests via [Resend](https://resend.com/).
+Lausuntobotti helps cut through the noise by assessing the relevancy of open requests with [Claude](https://claude.com/product/overview) and highlighting the most relevant ones, with support for email digests via [Resend](https://resend.com/).
 
 ## Table of contents
 
@@ -73,8 +73,8 @@ The bot then acts on the score:
 
 #### 0. Get the source code
 
-- Download the [latest release](https://github.com/kuosaton/seurantabotti/releases/latest) and extract the compressed files to a location of your choice.
-- Navigate to the repository root (`seurantabotti/`).
+- Download the [latest release](https://github.com/kuosaton/lausuntobotti/releases/latest) and extract the compressed files to a location of your choice.
+- Navigate to the repository root (`lausuntobotti/`).
 
 #### 1. Install the project dependencies
 
@@ -115,7 +115,7 @@ uv run python main.py
 Launches an interactive menu for easy access to all commands. Choose from numbered options:
 
 ```text
-Seurantabotti
+Lausuntobotti
 ─────────────────────────────────────
 1  Daily check
 2  Daily check (dry run)

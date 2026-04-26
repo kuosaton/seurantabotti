@@ -254,12 +254,18 @@ def cmd_daily(dry_run: bool) -> None:
 
 
 def cmd_weekly(dry_run: bool) -> None:  # pylint: disable=unused-argument
-    print("Weekly committee digest is not yet implemented (Sprint 2).", file=sys.stderr)
+    print(
+        "Weekly committee digest is not yet implemented (planned for version 0.3.0).",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 
 def cmd_midweek(dry_run: bool) -> None:  # pylint: disable=unused-argument
-    print("Midweek committee check is not yet implemented (Sprint 2).", file=sys.stderr)
+    print(
+        "Midweek committee check is not yet implemented (planned for version 0.3.0).",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 
@@ -437,7 +443,7 @@ def cmd_reset_state() -> None:
 # ---------------------------------------------------------------------------
 
 _MENU = """
-Seurantabotti
+Lausuntobotti
 ─────────────────────────────────────
 1  Daily check
 2  Daily check (dry run)
@@ -529,7 +535,7 @@ def cmd_interactive() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seurantabotti – Kuluttajaliitto monitoring tool")
+    parser = argparse.ArgumentParser(description="Lausuntobotti – Kuluttajaliitto monitoring tool")
     parser.add_argument("--daily", action="store_true", help="Run daily lausuntopalvelu check")
     parser.add_argument(
         "--weekly", action="store_true", help="Run weekly committee digest (Fridays)"

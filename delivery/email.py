@@ -137,7 +137,7 @@ def build_daily_digest(flagged: list[dict]) -> tuple[str, str, str]:
   {item_html}
   <hr style="border:none;border-top:1px solid #ddd;margin:32px 0 16px;">
   <p style="font-size:11px;color:#aaa;">
-    Seurantabotti &middot; <a href="https://github.com/kuosaton/seurantabotti" target="_blank" style="color:#aaa;">GitHub</a>
+    Lausuntobotti &middot; <a href="https://github.com/kuosaton/lausuntobotti" target="_blank" style="color:#aaa;">GitHub</a>
     &middot; Palautetta, kommentteja? Voit vastata suoraan tähän viestiin.
   </p>
 </body>
@@ -213,7 +213,7 @@ def build_weekly_digest(
     total_scored: int,
     total_logged: int,
 ) -> tuple[str, str, str]:
-    subject = f"Seurantabotti viikkokatsaus, vko {week_number}"
+    subject = f"Lausuntobotin viikkokatsaus, vko {week_number}"
     total_flagged = sum(len(v) for v in committee_items.values())
     text_body = _weekly_text_body(
         committee_items, week_number, total_flagged, total_scored, total_logged
@@ -232,7 +232,7 @@ def build_weekly_digest(
     Lokitettu (4-6): {total_logged}
   </p>
   <p style="font-size:11px;color:#aaa;">
-    Seurantabotti &middot; <a href="https://github.com/kuosaton/seurantabotti" target="_blank" style="color:#aaa;">GitHub</a>
+    Lausuntobotti &middot; <a href="https://github.com/kuosaton/lausuntobotti" target="_blank" style="color:#aaa;">GitHub</a>
     &middot; Palautetta, kommentteja? Voit vastata suoraan tähän viestiin.
   </p>
 </body>
