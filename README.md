@@ -7,7 +7,7 @@ A large language model-based tool to help [Kuluttajaliitto](https://www.kuluttaj
 
 Lausuntopalvelu publishes hundreds of new requests for comment (lausuntopyyntö) every month, and manually reviewing them all to spot the ones worth responding to is time-consuming.
 
-Seurantabotti helps cut through the noise by assessing the relevancy of open requests using [Claude](https://claude.com/product/overview) and highlighting the most relevant ones.
+Seurantabotti helps cut through the noise by assessing the relevancy of open requests with [Claude](https://claude.com/product/overview) and highlighting the most relevant ones, with support for email digests via [Resend](https://resend.com/).
 
 ## Table of contents
 
@@ -26,7 +26,7 @@ For new proposals, the bot:
 2. **Ignores ones that Kuluttajaliitto has already responded to.**
 3. **Scores their relevancy from 0 to 10.**
 4. **Flags high-scoring proposals for review** (score ≥ 6).
-5. **Notifies designated recipients** of new flagged proposals via an email digest (upcoming feature).
+5. **Notifies designated recipients** of new flagged proposals via an HTML email digest.
 
 ### Data sources
 
@@ -59,10 +59,15 @@ The bot then acts on the score:
 ### Prerequisites
 
 1. [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package and project manager)
-2. [Python 3.14](https://www.python.org/downloads/)
+2. [Python 3.14](https://www.python.org/downloads/) (We recommend [using uv to install and manage Python versions](https://docs.astral.sh/uv/guides/install-python/).)
+3. A [Claude Console account](https://platform.claude.com/) & [API key](https://platform.claude.com/settings/keys)
+4. (Optional, for sending email digests:)
+   - A [Resend](https://resend.com/) account & [API key](https://resend.com/docs/dashboard/api-keys/introduction)
+   - A domain ([Resend sends email using a domain you own](https://resend.com/docs/dashboard/domains/introduction).)
+   - Note: These are only required for functions that send email (`--send-flagged` or `--daily` without the `--dry-run` flag). Other functionality will work regardless.
 
 > [!TIP]
-> Our recommended method is [using uv to install and manage Python versions](https://docs.astral.sh/uv/guides/install-python/).
+> If you do not have a domain, we recommend [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/) for at-cost domain registrations and renewals without extra fees, and other benefits like free DNS, CDN, and SSL. Resend offers an easy [auto setup process for Cloudflare domains](https://resend.com/docs/knowledge-base/cloudflare#automatic-setup-recommended).
 
 ### Setup
 
@@ -119,7 +124,9 @@ Seurantabotti
 5  Review logged items (custom range)
 6  Preview flagged
 7  Preview logged (borderline)
-8  Reset state
+8  Send flagged (resend last digest)
+9  Reset state
+h  Help
 0  Exit
 ─────────────────────────────────────
 ```
@@ -142,6 +149,10 @@ uv run python main.py --review-logged --days 14
 
 # Preview the flagged-items digest (without sending)
 uv run python main.py --preview-flagged
+
+# Resend the last daily digest without re-running scoring
+uv run python main.py --send-flagged
+uv run python main.py --send-flagged --dry-run
 
 # Preview borderline items from the score log as a formatted digest (without sending)
 uv run python main.py --preview-logged
@@ -175,8 +186,6 @@ Score 7 proposal(s)? [Y/n] y
   [8/10] Hallituksen esitys verkkokaupan palautusoikeudesta
   [6/10] Asetus asuntolainojen ennenaikaisesta takaisinmaksusta
 
-
---- DRY RUN: would send email ---
 Subject: Uusia lausuntopyyntöjä, 25.4.2026
 
 2 uutta lausuntopyyntöä, jotka saattavat kiinnostaa Kuluttajaliittoa (pisteet 6-8):
@@ -193,6 +202,8 @@ Subject: Uusia lausuntopyyntöjä, 25.4.2026
    Teemat:    verkkokauppa, etämyynti, peruuttamisoikeus, kuluttajansuoja
    https://www.lausuntopalvelu.fi/FI/Proposal/Participation?proposalId=xxxx
    ...
+
+--- DRY RUN: would send email ---
 ```
 
 Each listed proposal in the scoring loop is accompanied by a tag signifying the taken action:
@@ -226,11 +237,7 @@ Prints proposals that fell into the borderline range and their scoring rationale
 
 ### Parliamentary committee analysis (`--weekly`, `--midweek`)
 
-In addition to lausuntopalvelu.fi, Kuluttajaliitto needs to track proceedings in relevant parliamentary committees (talousvaliokunta, sosiaali- ja terveysvaliokunta). The planned `--weekly` and `--midweek` commands would score new committee items using the same Claude-based relevance model and include them in a weekly digest.
-
-### Email delivery
-
-The email formatting and sending infrastructure is already in place. The `--daily` command builds a full HTML + plain-text digest and sends it via [Resend](https://resend.com) when `RESEND_API_KEY` and `SENDER_EMAIL` are configured.
+In addition to lausuntopalvelu.fi, Kuluttajaliitto needs to track proceedings in relevant parliamentary committees (talousvaliokunta, sosiaali- ja terveysvaliokunta). The planned `--weekly` and `--midweek` commands would score new committee items using the same Claude-based relevance model and deliver them in a weekly digest email.
 
 ## Development
 
