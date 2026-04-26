@@ -6,6 +6,7 @@ dependencies = [
     "httpx>=0.28.1",
     "anthropic>=0.96.0",
     "python-dotenv>=1.2.2",
+    "resend>=2.29.0",
 ]
 
 [project.optional-dependencies]
