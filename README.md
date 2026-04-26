@@ -86,12 +86,12 @@ cp .env.example .env
 
 Edit `.env` with your values:
 
-| Variable            | Description                      |
-| ------------------- | -------------------------------- |
-| `ANTHROPIC_API_KEY` | Anthropic API key                |
-| `SMTP_USER`         | Gmail address used to send email |
-| `SMTP_PASS`         | Gmail app password               |
-| `RECIPIENT_EMAIL`   | Address to deliver digests to    |
+| Variable            | Description                                             |
+| ------------------- | ------------------------------------------------------- |
+| `ANTHROPIC_API_KEY` | Anthropic API key                                       |
+| `RESEND_API_KEY`    | Resend API key for email sending                        |
+| `SENDER_EMAIL`      | From address (must be on a domain verified with Resend) |
+| `RECIPIENT_EMAIL`   | Address to deliver digests to                           |
 
 #### 3. Fetch up-to-date Kuluttajaliitto published statements context (required before first run)
 
@@ -230,7 +230,7 @@ In addition to lausuntopalvelu.fi, Kuluttajaliitto needs to track proceedings in
 
 ### Email delivery
 
-The email formatting and sending infrastructure is already in place. The `--daily` command builds a full HTML + plain-text digest and can send it via Gmail SMTP when credentials are configured.
+The email formatting and sending infrastructure is already in place. The `--daily` command builds a full HTML + plain-text digest and sends it via [Resend](https://resend.com) when `RESEND_API_KEY` and `SENDER_EMAIL` are configured.
 
 ## Development
 
