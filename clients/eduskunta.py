@@ -50,6 +50,15 @@ class Matter:
     type: str
 
 
+class AgendaNotPublished(LookupError):
+    """A committee page lists an agenda whose VaskiData XML is not published yet.
+
+    The committee web page announces an agenda before Eduskunta publishes its
+    structured VaskiData record, so this is an expected transient condition: the
+    agenda should resolve on a later run once the XML lands.
+    """
+
+
 def fetch_committee_page(client: httpx.Client, url: str) -> str:
     response = client.get(url, headers=HEADERS, timeout=30)
     response.raise_for_status()
@@ -88,7 +97,7 @@ def fetch_agenda_xml(client: httpx.Client, eduskuntatunnus: str) -> str:
     data = response.json()
     rows = data.get("rowData") or []
     if not rows:
-        raise LookupError(f"No VaskiData rows for {eduskuntatunnus!r}")
+        raise AgendaNotPublished(f"No VaskiData rows for {eduskuntatunnus!r}")
 
     columns = data["columnNames"]
 

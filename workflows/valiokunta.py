@@ -8,6 +8,7 @@ import httpx
 
 import config
 from clients.eduskunta import (
+    AgendaNotPublished,
     Document,
     Matter,
     build_matter_url,
@@ -59,6 +60,11 @@ def _resolve_agenda_matters(
         try:
             xml = fetch_agenda_xml(client, agenda.eduskuntatunnus or "")
             matters = parse_agenda_matters(xml)
+        except AgendaNotPublished:
+            print(
+                f"  [PENDING] {agenda.eduskuntatunnus} not yet in VaskiData — will retry next run"
+            )
+            continue
         except Exception as exc:
             print(
                 f"  [ERROR] could not fetch/parse {agenda.eduskuntatunnus}: {exc}",

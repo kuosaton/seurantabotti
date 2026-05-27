@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import config
 import main
 import workflows.valiokunta as valiokunta_workflow
-from clients.eduskunta import Document, Matter
+from clients.eduskunta import AgendaNotPublished, Document, Matter
 
 
 def _setup_valiokunta_state(
@@ -489,6 +489,27 @@ def test_cmd_valiokunta_handles_agenda_fetch_error(state_paths, monkeypatch, cap
     main.cmd_valiokunta(dry_run=True)
 
     assert "No matters scheduled" in capsys.readouterr().out
+
+
+def test_cmd_valiokunta_pending_agenda_not_yet_in_vaskidata(
+    state_paths, monkeypatch, capsys
+) -> None:
+    seen_documents = _setup_valiokunta_state(state_paths, monkeypatch)
+    monkeypatch.setattr(valiokunta_workflow, "fetch_committee_page", lambda client, url: "<html/>")
+    monkeypatch.setattr(valiokunta_workflow, "extract_documents", lambda html: [_doc()])
+
+    def _raise_pending(client, tunnus):
+        raise AgendaNotPublished(f"No VaskiData rows for {tunnus!r}")
+
+    monkeypatch.setattr(valiokunta_workflow, "fetch_agenda_xml", _raise_pending)
+
+    main.cmd_valiokunta(dry_run=True)
+
+    out = capsys.readouterr().out
+    assert "[PENDING] TaVE 40/2026 vp not yet in VaskiData" in out
+    assert "No matters scheduled" in out
+    # An unresolved agenda must not be recorded as seen, so it is retried next run.
+    assert json.loads(seen_documents.read_text(encoding="utf-8")) == {}
 
 
 def test_cmd_valiokunta_skips_non_agenda_documents(state_paths, monkeypatch, capsys) -> None:
