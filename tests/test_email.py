@@ -373,6 +373,35 @@ def test_build_valiokunta_digest_renders_borderline_items() -> None:
     assert "energia" in html_body
 
 
+def test_build_valiokunta_digest_renders_already_heard_items() -> None:
+    committee_items = {"talousvaliokunta": []}
+    already_heard_items = {
+        "talousvaliokunta": [
+            {
+                "eduskuntatunnus": "HE 3/2026 vp",
+                "title": "Jo kuultu asia",
+                "url": "https://www.eduskunta.fi/valtiopaivaasiat/HE+3/2026",
+            }
+        ]
+    }
+
+    _subject, html_body, text_body = email_mod.build_valiokunta_digest(
+        committee_items=committee_items,
+        week_number=17,
+        total_scored=0,
+        total_logged=0,
+        already_heard_items=already_heard_items,
+    )
+
+    assert "Jo kuultu (ei toimenpiteitä)" in text_body
+    assert "Jo kuultu asia" in text_body
+    assert "HE 3/2026 vp" in text_body
+    assert "Jo kuultu: 1" in text_body
+    assert "Ei nostettavia asioita." not in text_body
+    assert "Jo kuultu asia" in html_body
+    assert "https://www.eduskunta.fi/valtiopaivaasiat/HE+3/2026" in html_body
+
+
 def test_build_valiokunta_digest_sorts_items_by_score_descending() -> None:
     committee_items = {
         "talousvaliokunta": [

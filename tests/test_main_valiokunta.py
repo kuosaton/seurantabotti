@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
+import httpx
+
 import config
 import main
 import workflows.valiokunta as valiokunta_workflow
@@ -21,6 +23,8 @@ def _setup_valiokunta_state(
         encoding="utf-8",
     )
     monkeypatch.setattr(config, "SEEN_DOCUMENTS_PATH", seen_documents)
+    # Default: nobody heard yet, so the network expert-check is never made in tests.
+    monkeypatch.setattr(valiokunta_workflow, "matter_has_expert", lambda *args, **kwargs: False)
     if valiokunta_committees is not None:
         monkeypatch.setattr(valiokunta_workflow, "_VALIOKUNTA_COMMITTEES", valiokunta_committees)
     return seen_documents
@@ -136,13 +140,14 @@ def test_cmd_valiokunta_scores_and_logs_multiple_committees_by_default(
         },
     )
 
-    def _build_digest(items, week, total_scored, total_logged, borderline_items=None):
+    def _build_digest(items, week, total_scored, total_logged, **kwargs):
         captured_digest.update(
             {
                 "items": items,
                 "total_scored": total_scored,
                 "total_logged": total_logged,
-                "borderline_items": borderline_items,
+                "borderline_items": kwargs.get("borderline_items"),
+                "already_heard_items": kwargs.get("already_heard_items"),
             }
         )
         return ("S", "<h/>", "T")
@@ -326,7 +331,7 @@ def test_cmd_valiokunta_dry_run_scores_and_renders_digest(
     monkeypatch.setattr(
         valiokunta_workflow,
         "build_valiokunta_digest",
-        lambda items, week, total_scored, total_logged, borderline_items=None: (
+        lambda items, week, total_scored, total_logged, borderline_items=None, already_heard_items=None: (
             f"SUBJ vko{week}",
             "<html/>",
             f"TEXT scored={total_scored} logged={total_logged} flagged={sum(len(v) for v in items.values())}",
@@ -510,6 +515,99 @@ def test_cmd_valiokunta_pending_agenda_not_yet_in_vaskidata(
     assert "No matters scheduled" in out
     # An unresolved agenda must not be recorded as seen, so it is retried next run.
     assert json.loads(seen_documents.read_text(encoding="utf-8")) == {}
+
+
+def test_cmd_valiokunta_skips_already_heard_matter(state_paths, monkeypatch, capsys) -> None:
+    seen_documents = _setup_valiokunta_state(state_paths, monkeypatch)
+    monkeypatch.setattr(valiokunta_workflow, "fetch_committee_page", lambda client, url: "<html/>")
+    monkeypatch.setattr(valiokunta_workflow, "extract_documents", lambda html: [_doc()])
+    monkeypatch.setattr(valiokunta_workflow, "fetch_agenda_xml", lambda client, tunnus: "<xml/>")
+    monkeypatch.setattr(
+        valiokunta_workflow,
+        "parse_agenda_matters",
+        lambda xml: [
+            _matter(eduskuntatunnus="HE 1/2026 vp", title="Jo kuultu"),
+            _matter(eduskuntatunnus="HE 2/2026 vp", title="Pisteytetään"),
+        ],
+    )
+    monkeypatch.setattr(
+        valiokunta_workflow,
+        "matter_has_expert",
+        lambda client, tunnus, name="Kuluttajaliit": tunnus == "HE 1/2026 vp",
+    )
+
+    scored: list[str] = []
+
+    def _score(title, abstract, src, ctx):
+        scored.append(title)
+        return {"score": 8, "rationale": "R", "themes": []}
+
+    monkeypatch.setattr(valiokunta_workflow, "score_item", _score)
+
+    captured: dict = {}
+
+    def _build_digest(items, week, total_scored, total_logged, **kwargs):
+        captured["items"] = items
+        captured["already_heard_items"] = kwargs.get("already_heard_items")
+        return ("S", "<h/>", "T")
+
+    monkeypatch.setattr(valiokunta_workflow, "build_valiokunta_digest", _build_digest)
+
+    main.cmd_valiokunta(dry_run=True)
+
+    out = capsys.readouterr().out
+    assert "[SKIP HEARD] HE 1/2026 vp" in out
+    # The already-heard matter is not scored; the other one is.
+    assert scored == ["Pisteytetään"]
+    flagged_ids = [
+        item["eduskuntatunnus"] for items in captured["items"].values() for item in items
+    ]
+    assert "HE 1/2026 vp" not in flagged_ids
+    heard_ids = [
+        item["eduskuntatunnus"]
+        for items in captured["already_heard_items"].values()
+        for item in items
+    ]
+    assert heard_ids == ["HE 1/2026 vp"]
+    # Recorded as skipped_heard in the agenda's seen state.
+    seen = json.loads(seen_documents.read_text(encoding="utf-8"))
+    assert seen["EDK-1"]["matter_scores"]["HE 1/2026 vp"]["status"] == "skipped_heard"
+
+
+def test_cmd_valiokunta_scores_when_expert_check_fails(state_paths, monkeypatch, capsys) -> None:
+    _setup_valiokunta_state(state_paths, monkeypatch)
+    monkeypatch.setattr(valiokunta_workflow, "fetch_committee_page", lambda client, url: "<html/>")
+    monkeypatch.setattr(valiokunta_workflow, "extract_documents", lambda html: [_doc()])
+    monkeypatch.setattr(valiokunta_workflow, "fetch_agenda_xml", lambda client, tunnus: "<xml/>")
+    monkeypatch.setattr(
+        valiokunta_workflow,
+        "parse_agenda_matters",
+        lambda xml: [_matter(eduskuntatunnus="HE 5/2026 vp", title="Tarkistettava")],
+    )
+
+    def _raise(client, tunnus, name="Kuluttajaliit"):
+        raise httpx.HTTPError("boom")
+
+    monkeypatch.setattr(valiokunta_workflow, "matter_has_expert", _raise)
+
+    scored: list[str] = []
+    monkeypatch.setattr(
+        valiokunta_workflow,
+        "score_item",
+        lambda title, abstract, src, ctx: (
+            scored.append(title) or {"score": 8, "rationale": "R", "themes": []}
+        ),
+    )
+    monkeypatch.setattr(
+        valiokunta_workflow, "build_valiokunta_digest", lambda *a, **k: ("S", "<h/>", "T")
+    )
+
+    main.cmd_valiokunta(dry_run=True)
+
+    captured = capsys.readouterr()
+    assert "[WARN] could not check experts for HE 5/2026 vp" in captured.err
+    # Fail-open: the matter is still scored when the expert check errors.
+    assert scored == ["Tarkistettava"]
 
 
 def test_cmd_valiokunta_skips_non_agenda_documents(state_paths, monkeypatch, capsys) -> None:

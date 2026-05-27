@@ -28,6 +28,14 @@ ITEM_RE = re.compile(
     re.DOTALL,
 )
 
+# Asiantuntijalausunto (written expert statement) documents on a matter page embed the
+# author organisation in the document title, e.g.
+#   asiakirjatyyppikoodi:"AL",nimeketeksti:"HE 190/2025 vp TaV 17.02.2026 Kuluttajaliitto ry Asiantuntijalausunto"
+EXPERT_STATEMENT_RE = re.compile(r'asiakirjatyyppikoodi:"AL",nimeketeksti:"([^"]*)"')
+# Heard/invited experts (toimijat) appear as fraasiyhteistoteksti entries, e.g.
+#   fraasiyhteistoteksti:"Kuluttajaliitto ry"
+EXPERT_TOIMIJA_RE = re.compile(r'fraasiyhteistoteksti:"([^"]*)"')
+
 
 @dataclass(frozen=True)
 class Document:
@@ -145,3 +153,25 @@ def build_matter_url(eduskuntatunnus: str) -> str:
     if not normalized:
         return ""
     return f"{MATTER_URL_BASE}/{quote_plus(normalized, safe='/')}"
+
+
+def matter_has_expert(
+    client: httpx.Client,
+    eduskuntatunnus: str,
+    name: str = "Kuluttajaliit",
+) -> bool:
+    """Whether ``name`` has been heard on a matter as an expert.
+
+    Reads the public matter page, which embeds the expert list as JSON. Returns True
+    if the organisation has submitted a written asiantuntijalausunto (an "AL" document)
+    or appears as an invited/heard expert (toimija) on the matter.
+    """
+    url = build_matter_url(eduskuntatunnus)
+    if not url:
+        return False
+    response = client.get(url, headers=HEADERS, timeout=30, follow_redirects=True)
+    response.raise_for_status()
+    html = response.text
+    needle = name.casefold()
+    candidates = EXPERT_STATEMENT_RE.findall(html) + EXPERT_TOIMIJA_RE.findall(html)
+    return any(needle in candidate.casefold() for candidate in candidates)

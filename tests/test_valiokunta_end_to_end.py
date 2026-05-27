@@ -77,6 +77,7 @@ def test_cmd_valiokunta_full_pipeline_renders_real_digest(state_paths, monkeypat
         valiokunta_workflow, "fetch_committee_page", lambda client, url: COMMITTEE_HTML
     )
     monkeypatch.setattr(valiokunta_workflow, "fetch_agenda_xml", lambda client, tunnus: AGENDA_XML)
+    monkeypatch.setattr(valiokunta_workflow, "matter_has_expert", lambda *args, **kwargs: False)
     monkeypatch.setattr("builtins.input", lambda prompt: "y")
 
     scores_by_title = {

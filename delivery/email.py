@@ -263,16 +263,17 @@ def build_lausuntopyynto_digest(
 def _valiokunta_text_body(
     committee_items: dict[str, list[dict]],
     borderline_items: dict[str, list[dict]],
+    already_heard_items: dict[str, list[dict]],
     week_number: int,
-    total_flagged: int,
     summary_lines: list[str],
 ) -> str:
     lines = [f"Lausuntobotin valiokuntakatsaus, vko {week_number}\n"]
     for key, items in committee_items.items():
         borderline = borderline_items.get(key, [])
+        heard = already_heard_items.get(key, [])
         name = _committee_display_name(key)
         lines.append(f"--- {name.upper()} ---\n")
-        if not items and not borderline:
+        if not items and not borderline and not heard:
             lines.append("Ei nostettavia asioita.\n")
             continue
         for item in items:
@@ -293,6 +294,15 @@ def _valiokunta_text_body(
                     f"▸ [{fields['score']}/10] {fields['title']}",
                     f"   Tunnus:     {fields['eduskuntatunnus']}",
                     f"   {fields['rationale']}",
+                    "",
+                ]
+        if heard:
+            lines.append("Jo kuultu (ei toimenpiteitä):\n")
+            for item in heard:
+                lines += [
+                    f"▸ {item['title']}",
+                    f"   Tunnus:     {item.get('eduskuntatunnus', '-')}",
+                    f"   {item.get('url', '')}",
                     "",
                 ]
     lines += summary_lines
@@ -322,21 +332,45 @@ def _valiokunta_html_entries(items: list[dict]) -> str:
     return entries_html
 
 
+def _valiokunta_heard_entries(items: list[dict]) -> str:
+    """Light rendering for already-heard (unscored) matters: title + tunnus + link."""
+    entries_html = ""
+    for item in items:
+        url = item.get("url", "")
+        title = item["title"]
+        title_html = (
+            f'<a href="{url}" style="color:#888;text-decoration:none;">{title}</a>'
+            if url
+            else title
+        )
+        entries_html += (
+            '<p style="margin:2px 0;font-size:12px;color:#888;">'
+            f"{title_html} ({item.get('eduskuntatunnus', '-')})</p>"
+        )
+    return entries_html
+
+
 def _valiokunta_html_sections(
     committee_items: dict[str, list[dict]],
     borderline_items: dict[str, list[dict]],
+    already_heard_items: dict[str, list[dict]],
 ) -> str:
     sections_html = ""
     for key, items in committee_items.items():
         name = _committee_display_name(key)
         borderline = borderline_items.get(key, [])
+        heard = already_heard_items.get(key, [])
         items_html = _valiokunta_html_entries(items)
-        if not items and not borderline:
+        if not items and not borderline and not heard:
             items_html = '<p style="color:#888;font-size:13px;">Ei nostettavia asioita.</p>'
         if borderline:
             items_html += f"""
             <p style="margin:18px 0 8px;font-size:13px;font-weight:bold;color:#666;">Rajatapauksia</p>
             {_valiokunta_html_entries(borderline)}"""
+        if heard:
+            items_html += f"""
+            <p style="margin:18px 0 8px;font-size:13px;font-weight:bold;color:#888;">Jo kuultu (ei toimenpiteitä)</p>
+            {_valiokunta_heard_entries(heard)}"""
         sections_html += f"""
         <h3 style="color:#1a56a0;border-bottom:1px solid #ddd;padding-bottom:6px;">{name}</h3>
         {items_html}"""
@@ -347,17 +381,19 @@ def _valiokunta_summary(
     total_scored: int,
     total_flagged: int,
     total_logged: int,
+    total_already_heard: int = 0,
 ) -> tuple[list[str], str]:
     text_lines = [
         "---",
         f"Arvioitu yhteensä: {total_scored} asiaa",
         f"Nostettu: {total_flagged}",
         f"Rajatapauksia: {total_logged}",
+        f"Jo kuultu: {total_already_heard}",
     ]
     html = (
         '  <p style="font-size:12px;color:#888;">\n'
         f"    Arvioitu: {total_scored} asiaa &ndash; Nostettu: {total_flagged} &ndash;\n"
-        f"    Rajatapauksia: {total_logged}\n"
+        f"    Rajatapauksia: {total_logged} &ndash; Jo kuultu: {total_already_heard}\n"
         "  </p>"
     )
     return text_lines, html
@@ -393,31 +429,44 @@ def _order_committee_mapping(items: dict[str, list[dict]]) -> dict[str, list[dic
     return ordered
 
 
-def build_valiokunta_digest(
+def build_valiokunta_digest(  # noqa: PLR0913
     committee_items: dict[str, list[dict]],
     week_number: int,
     total_scored: int,
     total_logged: int,
     borderline_items: dict[str, list[dict]] | None = None,
+    already_heard_items: dict[str, list[dict]] | None = None,
 ) -> tuple[str, str, str]:
     subject = f"Lausuntobotin valiokuntakatsaus, vko {week_number}"
     committee_items = _order_committee_mapping(committee_items)
     borderline_items = borderline_items or {key: [] for key in committee_items}
     borderline_items = _order_committee_mapping(borderline_items)
+    already_heard_items = already_heard_items or {key: [] for key in committee_items}
+    already_heard_items = _order_committee_mapping(already_heard_items)
     committee_items = {key: _sort_valiokunta_items(items) for key, items in committee_items.items()}
     borderline_items = {
         key: _sort_valiokunta_items(borderline_items.get(key, [])) for key in committee_items
     }
+    # Already-heard items are unscored, so sort them by title rather than score.
+    already_heard_items = {
+        key: sorted(already_heard_items.get(key, []), key=lambda item: item.get("title", ""))
+        for key in committee_items
+    }
     total_flagged = sum(len(v) for v in committee_items.values())
-    summary_lines, summary_html = _valiokunta_summary(total_scored, total_flagged, total_logged)
+    total_already_heard = sum(len(v) for v in already_heard_items.values())
+    summary_lines, summary_html = _valiokunta_summary(
+        total_scored, total_flagged, total_logged, total_already_heard
+    )
     text_body = _valiokunta_text_body(
         committee_items,
         borderline_items,
+        already_heard_items,
         week_number,
-        total_flagged,
         summary_lines,
     )
-    sections_html = _valiokunta_html_sections(committee_items, borderline_items)
+    sections_html = _valiokunta_html_sections(
+        committee_items, borderline_items, already_heard_items
+    )
     html_body = f"""<!DOCTYPE html>
 <html lang="fi">
 <head><meta charset="utf-8"><title>{subject}</title></head>

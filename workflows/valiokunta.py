@@ -15,6 +15,7 @@ from clients.eduskunta import (
     extract_documents,
     fetch_agenda_xml,
     fetch_committee_page,
+    matter_has_expert,
     parse_agenda_matters,
 )
 from delivery.email import build_valiokunta_digest, send_email
@@ -85,6 +86,18 @@ def _mark_agenda_seen(seen_docs: dict, agenda: Document) -> None:
     }
 
 
+def _matter_already_heard(client: httpx.Client, matter: Matter) -> bool:
+    """Whether Kuluttajaliitto has already been heard on this matter (fails open)."""
+    try:
+        return matter_has_expert(client, matter.eduskuntatunnus, "Kuluttajaliit")
+    except httpx.HTTPError as exc:
+        print(
+            f"  [WARN] could not check experts for {matter.eduskuntatunnus}: {exc}",
+            file=sys.stderr,
+        )
+        return False
+
+
 def _score_valiokunta_matter(
     matter: Matter,
     committee_key: str,
@@ -121,16 +134,32 @@ def _record_valiokunta_matter(
     )
 
 
-def _deliver_valiokunta_digest(
+def _record_scored_matters(
+    scored_matters: list[tuple[str, str, Matter, dict]],
+    digest_sent: bool,
+    seen_docs: dict,
+) -> None:
+    for agenda_id, committee_key, matter, result in scored_matters:
+        notified = classify_score(result["score"]) == "flag" and digest_sent
+        _record_valiokunta_matter(matter, committee_key, result, notified)
+        seen_docs[agenda_id]["matter_scores"][matter.eduskuntatunnus] = {
+            "score": result["score"],
+            "notified": notified,
+        }
+
+
+def _deliver_valiokunta_digest(  # noqa: PLR0913
     committee_items: dict[str, list[dict]],
     borderline_items: dict[str, list[dict]],
+    already_heard_items: dict[str, list[dict]],
     total_scored: int,
     total_logged: int,
     dry_run: bool,
 ) -> bool:
     week_number = datetime.now(UTC).isocalendar().week
     total_flagged = sum(len(items) for items in committee_items.values())
-    if total_flagged == 0 and total_logged == 0:
+    total_already_heard = sum(len(items) for items in already_heard_items.values())
+    if total_flagged == 0 and total_logged == 0 and total_already_heard == 0:
         print("No valiokunta items above log threshold.")
         return False
 
@@ -140,6 +169,7 @@ def _deliver_valiokunta_digest(
         total_scored,
         total_logged,
         borderline_items=borderline_items,
+        already_heard_items=already_heard_items,
     )
     print(f"\nSubject: {subject}")
     print(text_body)
@@ -189,61 +219,76 @@ def cmd_valiokunta(dry_run: bool, ctx: dict | None = None) -> None:  # noqa: PLR
 
     committee_items: dict[str, list[dict]] = {key: [] for key in _VALIOKUNTA_COMMITTEES}
     borderline_items: dict[str, list[dict]] = {key: [] for key in _VALIOKUNTA_COMMITTEES}
+    already_heard_items: dict[str, list[dict]] = {key: [] for key in _VALIOKUNTA_COMMITTEES}
     scored_matters: list[tuple[str, str, Matter, dict]] = []
     total_scored = 0
     total_logged = 0
 
-    for committee_key, agenda, matters in agenda_matters:
-        if agenda.edktunnus not in seen_docs:
-            _mark_agenda_seen(seen_docs, agenda)
-        for matter in matters:
-            result = _score_valiokunta_matter(matter, committee_key, ctx)
-            if result is None:
-                continue
-
-            score = result["score"]
-            total_scored += 1
-            scored_matters.append((agenda.edktunnus, committee_key, matter, result))
-
-            band = classify_score(score)
-            url = build_matter_url(matter.eduskuntatunnus)
-            if band == "flag":
-                print(f"  [FLAG {score}/10] {matter.eduskuntatunnus}: {matter.title}")
-                committee_items[committee_key].append(
-                    {
-                        "title": matter.title,
-                        "eduskuntatunnus": matter.eduskuntatunnus,
-                        "score": score,
-                        "rationale": result.get("rationale", ""),
-                        "themes": result.get("themes", []),
-                        "url": url,
+    with httpx.Client() as client:
+        for committee_key, agenda, matters in agenda_matters:
+            if agenda.edktunnus not in seen_docs:
+                _mark_agenda_seen(seen_docs, agenda)
+            for matter in matters:
+                url = build_matter_url(matter.eduskuntatunnus)
+                if _matter_already_heard(client, matter):
+                    print(f"  [SKIP HEARD] {matter.eduskuntatunnus}: {matter.title}")
+                    already_heard_items[committee_key].append(
+                        {
+                            "title": matter.title,
+                            "eduskuntatunnus": matter.eduskuntatunnus,
+                            "url": url,
+                        }
+                    )
+                    seen_docs[agenda.edktunnus]["matter_scores"][matter.eduskuntatunnus] = {
+                        "score": None,
+                        "notified": False,
+                        "status": "skipped_heard",
                     }
-                )
-            elif band == "log":
-                total_logged += 1
-                print(f"  [LOG {score}/10] {matter.eduskuntatunnus}: {matter.title}")
-                borderline_items[committee_key].append(
-                    {
-                        "title": matter.title,
-                        "eduskuntatunnus": matter.eduskuntatunnus,
-                        "score": score,
-                        "rationale": result.get("rationale", ""),
-                        "themes": result.get("themes", []),
-                        "url": url,
-                    }
-                )
-            else:
-                print(f"  [DROP {score}/10] {matter.eduskuntatunnus}: {matter.title}")
+                    continue
+                result = _score_valiokunta_matter(matter, committee_key, ctx)
+                if result is None:
+                    continue
+
+                score = result["score"]
+                total_scored += 1
+                scored_matters.append((agenda.edktunnus, committee_key, matter, result))
+
+                band = classify_score(score)
+                if band == "flag":
+                    print(f"  [FLAG {score}/10] {matter.eduskuntatunnus}: {matter.title}")
+                    committee_items[committee_key].append(
+                        {
+                            "title": matter.title,
+                            "eduskuntatunnus": matter.eduskuntatunnus,
+                            "score": score,
+                            "rationale": result.get("rationale", ""),
+                            "themes": result.get("themes", []),
+                            "url": url,
+                        }
+                    )
+                elif band == "log":
+                    total_logged += 1
+                    print(f"  [LOG {score}/10] {matter.eduskuntatunnus}: {matter.title}")
+                    borderline_items[committee_key].append(
+                        {
+                            "title": matter.title,
+                            "eduskuntatunnus": matter.eduskuntatunnus,
+                            "score": score,
+                            "rationale": result.get("rationale", ""),
+                            "themes": result.get("themes", []),
+                            "url": url,
+                        }
+                    )
+                else:
+                    print(f"  [DROP {score}/10] {matter.eduskuntatunnus}: {matter.title}")
 
     digest_sent = _deliver_valiokunta_digest(
-        committee_items, borderline_items, total_scored, total_logged, dry_run
+        committee_items,
+        borderline_items,
+        already_heard_items,
+        total_scored,
+        total_logged,
+        dry_run,
     )
-    for agenda_id, committee_key, matter, result in scored_matters:
-        notified = classify_score(result["score"]) == "flag" and digest_sent
-        _record_valiokunta_matter(matter, committee_key, result, notified)
-        seen_docs[agenda_id]["matter_scores"][matter.eduskuntatunnus] = {
-            "score": result["score"],
-            "notified": notified,
-        }
-
+    _record_scored_matters(scored_matters, digest_sent, seen_docs)
     _save_json(config.SEEN_DOCUMENTS_PATH, seen_docs)

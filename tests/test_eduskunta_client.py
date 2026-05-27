@@ -10,6 +10,7 @@ from clients.eduskunta import (
     extract_documents,
     fetch_agenda_xml,
     fetch_committee_page,
+    matter_has_expert,
     parse_agenda_matters,
 )
 
@@ -130,3 +131,54 @@ def test_fetch_agenda_xml_raises_on_empty_rows() -> None:
     with httpx.Client(transport=_Transport()) as client:
         with pytest.raises(LookupError, match="No VaskiData rows"):
             fetch_agenda_xml(client, "TaVE 999/2026 vp")
+
+
+def _matter_page_client(html: str, captured: dict | None = None) -> httpx.Client:
+    class _Transport(httpx.BaseTransport):
+        def handle_request(self, request: httpx.Request) -> httpx.Response:
+            if captured is not None:
+                captured["url"] = str(request.url)
+                captured["user_agent"] = request.headers["user-agent"]
+            return httpx.Response(200, text=html)
+
+    return httpx.Client(transport=_Transport())
+
+
+def test_matter_has_expert_detects_written_statement() -> None:
+    html = (
+        'x asiakirjatyyppikoodi:"AL",nimeketeksti:"HE 190/2025 vp TaV 17.02.2026 '
+        'Kuluttajaliitto ry Asiantuntijalausunto" x'
+    )
+    captured: dict = {}
+    with _matter_page_client(html, captured) as client:
+        assert matter_has_expert(client, "HE 190/2025 vp") is True
+    assert captured["url"] == build_matter_url("HE 190/2025 vp")
+    assert captured["user_agent"] == HEADERS["User-Agent"]
+
+
+def test_matter_has_expert_detects_invited_toimija() -> None:
+    html = 'fraasiyhteistoteksti:"Kuluttajaliitto ry"'
+    with _matter_page_client(html) as client:
+        assert matter_has_expert(client, "HE 1/2026 vp") is True
+
+
+def test_matter_has_expert_is_case_insensitive() -> None:
+    html = 'fraasiyhteistoteksti:"kuluttajaliitto RY"'
+    with _matter_page_client(html) as client:
+        assert matter_has_expert(client, "HE 1/2026 vp") is True
+
+
+def test_matter_has_expert_false_for_other_orgs() -> None:
+    html = (
+        'asiakirjatyyppikoodi:"AL",nimeketeksti:"HE 1/2026 vp TaV Finanssiala ry Asiantuntijalausunto"'
+        ' fraasiyhteistoteksti:"valtiovarainministeriö"'
+    )
+    with _matter_page_client(html) as client:
+        assert matter_has_expert(client, "HE 1/2026 vp") is False
+
+
+def test_matter_has_expert_skips_request_without_eduskuntatunnus() -> None:
+    captured: dict = {}
+    with _matter_page_client("", captured) as client:
+        assert matter_has_expert(client, "   ") is False
+    assert captured == {}
