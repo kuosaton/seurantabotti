@@ -75,6 +75,19 @@ def fetch_recent(client: httpx.Client, top: int = 50) -> list[Proposal]:
     return [_parse_entry(e) for e in root.findall("atom:entry", NS)]
 
 
+def fetch_by_id(client: httpx.Client, proposal_id: str) -> Proposal | None:
+    """Fetch a single proposal by its GUID. Returns None if not found."""
+    r = client.get(
+        f"{BASE_URL}/Proposals",
+        params={"$filter": f"Id eq guid'{proposal_id}'", "$top": "1"},
+        timeout=20,
+    )
+    r.raise_for_status()
+    root = ET.fromstring(r.text)
+    entries = root.findall("atom:entry", NS)
+    return _parse_entry(entries[0]) if entries else None
+
+
 def _check_distribution_list(html: str, name: str) -> bool:
     m = re.search(
         r"<h5>\s*Jakelu:\s*</h5>\s*<div[^>]*>\s*<table[^>]*>(?P<table>.*?)</table>",
