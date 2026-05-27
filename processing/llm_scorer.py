@@ -34,6 +34,10 @@ sopimussuhteisiin, hintoihin ja maksuihin, velkaantumiseen, rahoitus- ja \
 maksupalveluihin, asumiseen, tuoteturvallisuuteen, välttämättömiin palveluihin, \
 digitaalisiin alustoihin, huijauksiin, sote-palveluiden käyttäjien oikeuksiin tai \
 kestävän kuluttamisen käytännön edellytyksiin.
+- Asukkaiden arkeen ja asumiseen suoraan vaikuttava sääntely (mm. \
+asuntoyhteisöjen sisäiset säännöt, asumisterveys, asumisviihtyvyys, \
+vuokrasuhteet) on vahva signaali myös silloin, kun lain pintatason aihe \
+näyttää kuuluvan muualle.
 
 Tehtäväsi:
 1. Arvioi asteikolla 0-10, kuinka relevantti asia on Kuluttajaliitolle.

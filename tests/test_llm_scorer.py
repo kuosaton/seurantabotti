@@ -55,6 +55,7 @@ def test_system_prompt_keeps_mission_and_noise_guardrails() -> None:
     assert "älä asian oikeudellista lopputulosta" in prompt
     assert "pelkän yleisen yhteiskunnallisen merkityksen" in prompt
     assert "Väärät nostot heikentävät työkalun käyttökelpoisuutta" in prompt
+    assert "asumisviihtyvyys" in prompt
 
 
 def test_score_item_ignores_jakelu_signal(monkeypatch) -> None:

@@ -11,9 +11,9 @@ def test_load_scoring_config_uses_builtin_defaults_when_toml_missing(tmp_path) -
     scoring_config = config.load_scoring_config(tmp_path / "missing.toml", environ={})
 
     assert scoring_config == config.ScoringConfig(
-        model="claude-haiku-4-5",
+        model="claude-sonnet-4-6",
         max_tokens=500,
-        effort=None,
+        effort="medium",
         timeout_seconds=45.0,
         prompt_cache=True,
         cache_ttl="5m",
