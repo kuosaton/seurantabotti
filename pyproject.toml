@@ -18,6 +18,8 @@ dev = [
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
     "ruff>=0.15.13",
+    # Lets httpx use the Claude Code sandbox's SOCKS proxy; not needed in production.
+    "socksio>=1.0.0",
 ]
 
 [tool.pytest.ini_options]

@@ -44,9 +44,9 @@ class ScoringConfig:
 
 
 _DEFAULT_SCORING_CONFIG = ScoringConfig(
-    model="claude-haiku-4-5",
+    model="claude-sonnet-4-6",
     max_tokens=500,
-    effort=None,
+    effort="medium",
     timeout_seconds=45.0,
     prompt_cache=True,
     cache_ttl="5m",
