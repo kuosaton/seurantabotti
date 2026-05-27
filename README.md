@@ -14,7 +14,7 @@ The bot is designed to uncover public policy items that are relevant to Kuluttaj
 It monitors two public sources:
 
 - **lausuntopalvelu.fi proposals**: skips proposals where Kuluttajaliitto is already on the distribution list or has already responded.
-- **Eduskunta committee agendas**: reviews each agenda matter.
+- **Eduskunta committee agendas**: reviews each agenda matter, skipping matters where Kuluttajaliitto has already been heard as an expert.
 
 For the remaining items, the bot:
 
@@ -25,7 +25,7 @@ For the remaining items, the bot:
 
 ### Relevancy scoring
 
-Each item is scored by Claude (default: [Haiku 4.5](https://www.anthropic.com/news/claude-haiku-4-5)) based on Kuluttajaliitto's previously published statements and areas of focus.
+Each item is scored by Claude based on Kuluttajaliitto's previously published statements and areas of focus.
 
 | Score | Meaning                                                                                                                     | Action                       |
 | ----- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
@@ -48,11 +48,11 @@ All data comes from publicly accessible sources:
 Prerequisites:
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- [Python 3.14](https://docs.astral.sh/uv/guides/install-python/) (uv can use an existing installation or automatically install one if missing.)
+- [Python 3.14](https://docs.astral.sh/uv/guides/install-python/) (uv can use an existing installation or automatically install one if missing)
 
 ### Setup
 
-Download the [latest release](https://github.com/kuosaton/lausuntobotti/releases/latest), extract the compressed files, and navigate into `lausuntobotti/`. Then:
+Download the [latest release](https://github.com/kuosaton/lausuntobotti/releases/latest), extract the compressed files, and navigate into the directory root. Then:
 
 #### 1. Configure the environment
 
@@ -85,7 +85,7 @@ Direct commands are listed with:
 uv run python main.py --help
 ```
 
-`uv run` works without activating a virtual environment. If you prefer an activated shell, run `uv sync` first, activate `.venv`, and then use the same commands without the `uv run` prefix.
+`uv run` works without activating a virtual environment. If you prefer an activated shell, run `uv sync` first, activate `.venv`, and then use commands without the `uv run` prefix.
 
 ### Valiokunta Analysis
 
@@ -95,22 +95,32 @@ Use `--resend-valiokunta-digest` to resend the valiokunta digest from recent sco
 
 ## Development
 
+Install development dependencies using `uv sync --extra dev`.
+
 ```bash
-# Canonical quality gate (same command used in CI)
-uv run make check
+# Format project Python files
+uv run ruff format .
 
-# Fast local smoke checks
-uv run make quick-test
+# Check formatting without making changes
+make format
 
-# Optional: run configured hooks across all files
-uv run make precommit
+# Lint
+make lint
 
-# One-time install for git hooks (pre-commit + pre-push)
-uv run make precommit-install
+# Type checking
+make typecheck
+
+# Tests
+make test
+
+# Combined checks (format + lint + typecheck + test), used in CI
+make check
 
 # Mutation testing (heavier quality signal)
-uv run make mutation
-uv run make mutation-results
+make mutation
+
+# One-time install for git hooks (pre-commit, pre-push)
+make precommit-install
 ```
 
 ### State files
@@ -128,27 +138,15 @@ All state lives under `state/`:
 ### Model configuration (optional)
 
 Built-in defaults work without a config file. To customize them locally, copy
-[`model_config.example.toml`](model_config.example.toml) to `model_config.toml`:
+[`model_config.example.toml`](model_config.example.toml) to `model_config.toml`. Edit this file to try another [Claude model](https://platform.claude.com/docs/en/about-claude/models/overview):
 
-```toml
-[scoring]
-model = "claude-haiku-4-5"
-# Sonnet/Opus 4.6+ only. Uncomment with e.g. model = "claude-sonnet-4-6".
-# effort = "medium"
-max_tokens = 500
-timeout_seconds = 45.0
-prompt_cache = true
-cache_ttl = "5m"
-```
+- [Sonnet 4.6](https://www.anthropic.com/news/claude-sonnet-4-6) is the default model for a balance of speed and intelligence.
 
-Edit this file to try another [Claude model](https://platform.claude.com/docs/en/about-claude/models/overview):
+- [Haiku 4.5](https://www.anthropic.com/news/claude-haiku-4-5) can be explored for cost savings. In our experiments, we found it struggled with ambiguous or borderline items.
 
-- Haiku 4.5 is the default for high-volume, short, structured relevance scoring where speed and cost matter.
-- Sonnet 4.6 may help with ambiguous or borderline items, but costs more. Compare it against historical score log examples before switching globally.
+[effort](https://platform.claude.com/docs/en/build-with-claude/effort), max_tokens, timeout, and [prompt cache](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) settings are tuning knobs, not required setup. Keep caching enabled unless you have a particular reason to disable it.
 
-`effort` is optional and is only sent when configured; use it with supported Sonnet/Opus models, such as `effort = "medium"` for Sonnet 4.6. `max_tokens`, timeout, and cache settings are tuning knobs, not required setup. Keep [prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) enabled unless you have a reason to disable it.
-
-`model_config.toml` is ignored by Git so local model experiments do not get committed accidentally. For deployment-specific overrides, use the optional `CLAUDE_SCORING_*` environment variables shown in `.env.example`; environment variables take precedence over `model_config.toml`.
+For deployment-specific overrides, use the optional `CLAUDE_SCORING_*` environment variables shown in `.env.example`; environment variables take precedence over `model_config.toml`.
 
 ### System prompt
 
