@@ -110,9 +110,10 @@ def test_cmd_lausuntopyynnot_borderline_only_triggers_digest(state_paths, monkey
         lambda *args, **kwargs: {"score": 5, "rationale": "Rajatapaus", "themes": []},
     )
 
-    def _capture_build(flagged, borderline=None):
+    def _capture_build(flagged, borderline=None, skipped=None):
         captured["flagged"] = list(flagged)
         captured["borderline"] = list(borderline or [])
+        captured["skipped"] = list(skipped or [])
         return "SUBJ", "<p>H</p>", "TEXT"
 
     monkeypatch.setattr(lausunto_workflow, "build_lausuntopyynto_digest", _capture_build)
@@ -122,6 +123,47 @@ def test_cmd_lausuntopyynnot_borderline_only_triggers_digest(state_paths, monkey
     assert captured["flagged"] == []
     assert len(captured["borderline"]) == 1
     assert captured["borderline"][0]["score"] == 5
+    assert captured["skipped"] == []
+
+
+def test_cmd_lausuntopyynnot_skipped_only_triggers_digest(state_paths, monkeypatch) -> None:
+    proposal = Proposal(
+        id="skipped-only",
+        title="Jakelussa oleva lausuntopyynto",
+        organization_name="Testi",
+        abstract="Kuvaus",
+        deadline=datetime.now(main.UTC) + timedelta(days=3),
+        published_on=datetime.now(main.UTC),
+        url="https://example.invalid/p/skipped-only",
+    )
+
+    captured: dict = {}
+
+    monkeypatch.setattr(lausunto_workflow, "fetch_recent", lambda client, top: [proposal])
+    monkeypatch.setattr(
+        lausunto_workflow, "get_participation_flags", lambda client, pid, name: (True, False)
+    )
+
+    def _should_not_score(*args, **kwargs):
+        raise AssertionError("score_item should not run for skipped proposals")
+
+    monkeypatch.setattr(lausunto_workflow, "score_item", _should_not_score)
+
+    def _capture_build(flagged, borderline=None, skipped=None):
+        captured["flagged"] = list(flagged)
+        captured["borderline"] = list(borderline or [])
+        captured["skipped"] = list(skipped or [])
+        return "SUBJ", "<p>H</p>", "TEXT"
+
+    monkeypatch.setattr(lausunto_workflow, "build_lausuntopyynto_digest", _capture_build)
+
+    main.cmd_lausuntopyynnot(dry_run=True)
+
+    assert captured["flagged"] == []
+    assert captured["borderline"] == []
+    assert len(captured["skipped"]) == 1
+    assert captured["skipped"][0]["proposal"] is proposal
+    assert captured["skipped"][0]["reason"] == "jakelu"
 
 
 def test_cmd_review_logged_shows_borderline_and_excludes_flagged_and_old(
@@ -460,7 +502,7 @@ def test_deliver_digest_aborts_when_send_declined(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
         lausunto_workflow,
         "build_lausuntopyynto_digest",
-        lambda f, borderline=None: ("S", "<p>H</p>", "Body"),
+        lambda f, borderline=None, skipped=None: ("S", "<p>H</p>", "Body"),
     )
     monkeypatch.setattr(
         lausunto_workflow,

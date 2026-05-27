@@ -16,6 +16,8 @@ It monitors two public sources:
 - **lausuntopalvelu.fi proposals**: skips proposals where Kuluttajaliitto is already on the distribution list or has already responded.
 - **Eduskunta committee agendas**: reviews each agenda matter, skipping matters where Kuluttajaliitto has already been heard as an expert.
 
+Digests include compact "ei toimenpiteitä" footnotes for these structural skips, so skipped-but-relevant-looking items remain auditable without being treated as requiring action.
+
 For the remaining items, the bot:
 
 1. Scores relevance from 0 to 10 with Claude.

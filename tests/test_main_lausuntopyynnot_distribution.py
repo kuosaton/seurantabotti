@@ -10,7 +10,7 @@ from clients.lausuntopalvelu import Proposal
 
 
 def test_cmd_lausuntopyynnot_skips_when_kuluttajaliitto_already_on_distribution_list(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, capsys
 ) -> None:
     state_dir = tmp_path / "state"
     context_dir = tmp_path / "context"
@@ -67,8 +67,12 @@ def test_cmd_lausuntopyynnot_skips_when_kuluttajaliitto_already_on_distribution_
 
     main.cmd_lausuntopyynnot(dry_run=True)
     main.cmd_lausuntopyynnot(dry_run=True)
+    out = capsys.readouterr().out
 
     assert captured_lookup == {"calls": 1, "pid": proposal.id, "name": "Kuluttajaliit"}
+    assert "Ohitetut (1 kpl" in out
+    assert "Lakimuutos kuluttajille" in out
+    assert "Syy:       Jakelussa" in out
 
     seen = json.loads(seen_path.read_text(encoding="utf-8"))
     assert seen[proposal.id]["status"] == "skipped_jakelu"
@@ -84,7 +88,7 @@ def test_cmd_lausuntopyynnot_skips_when_kuluttajaliitto_already_on_distribution_
 
 
 def test_cmd_lausuntopyynnot_skips_when_kuluttajaliitto_already_responded(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, capsys
 ) -> None:
     state_dir = tmp_path / "state"
     context_dir = tmp_path / "context"
@@ -133,6 +137,11 @@ def test_cmd_lausuntopyynnot_skips_when_kuluttajaliitto_already_responded(
     monkeypatch.setattr(lausunto_workflow, "score_item", should_not_score)
 
     main.cmd_lausuntopyynnot(dry_run=True)
+    out = capsys.readouterr().out
+
+    assert "Ohitetut (1 kpl" in out
+    assert "Jo vastattu lausuntopyyntö" in out
+    assert "Syy:       Jo vastattu" in out
 
     seen = json.loads(seen_path.read_text(encoding="utf-8"))
     assert seen[proposal.id]["status"] == "skipped_already_responded"

@@ -111,10 +111,28 @@ def send_email(subject: str, html_body: str, text_body: str = "") -> str:
 # ---------------------------------------------------------------------------
 
 
+_SKIP_REASON_LABELS = {
+    "jakelu": "Jakelussa",
+    "already_responded": "Jo vastattu",
+}
+
+
+def _skip_reason_label(reason: str) -> str:
+    return _SKIP_REASON_LABELS.get(reason, reason)
+
+
 def _sort_items(items: list[dict]) -> list[dict]:
     return sorted(
         items,
         key=lambda x: (-x["score"], x["proposal"].deadline or datetime.max),
+    )
+
+
+def _sort_skipped(items: list[dict]) -> list[dict]:
+    # Skipped items are unscored, so group by reason and then deadline/title.
+    return sorted(
+        items,
+        key=lambda x: (x["reason"], x["proposal"].deadline or datetime.max, x["proposal"].title),
     )
 
 
@@ -193,12 +211,49 @@ def _render_html_entry(item: dict) -> str:
         </div>"""
 
 
+def _render_skipped_entry(item: dict) -> list[str]:
+    """Light text rendering for a skipped (unscored) proposal."""
+    p = item["proposal"]
+    entry = [
+        f"▸ {p.title}",
+        f"   Pyytäjä:   {p.organization_name}",
+        f"   Määräaika: {_deadline_display(p.deadline)}",
+        f"   Syy:       {_skip_reason_label(item['reason'])}",
+    ]
+    if p.url:
+        entry.append(f"   {p.url}")
+    entry.append("")
+    return entry
+
+
+def _render_skipped_html(skipped: list[dict]) -> str:
+    """Light HTML rendering for skipped (unscored) proposals."""
+    rows = '<ul style="margin:0;padding-left:18px;font-size:12px;color:#888;">'
+    for item in skipped:
+        p = item["proposal"]
+        title_html = (
+            f'<a href="{p.url}" style="color:#888;text-decoration:none;">{p.title}</a>'
+            if p.url
+            else p.title
+        )
+        rows += (
+            '<li style="margin:2px 0;">'
+            f"{title_html} &ndash; {p.organization_name} "
+            f"&ndash; {_deadline_html(p.deadline)} "
+            f"({_skip_reason_label(item['reason'])})</li>"
+        )
+    return rows + "</ul>"
+
+
 def build_lausuntopyynto_digest(
-    flagged: list[dict], borderline: list[dict] | None = None
+    flagged: list[dict],
+    borderline: list[dict] | None = None,
+    skipped: list[dict] | None = None,
 ) -> tuple[str, str, str]:
     today = _fmt_date(date.today())
     flagged_sorted = _sort_items(flagged)
     borderline_sorted = _sort_items(borderline or [])
+    skipped_sorted = _sort_skipped(skipped or [])
     subject = f"Uusia lausuntopyyntöjä, {today}"
     separator = "─" * 60
 
@@ -221,6 +276,15 @@ def build_lausuntopyynto_digest(
         lines.append(f"Rajatapauksia ({len(borderline_sorted)} kpl, pistemäärä 4-5):\n")
         for item in borderline_sorted:
             lines += _render_text_entry(item, separator)
+
+    if skipped_sorted:
+        if lines:
+            lines.append("")
+        lines.append(
+            f"Ohitetut ({len(skipped_sorted)} kpl, ei toimenpiteitä – jakelussa tai jo vastattu):\n"
+        )
+        for item in skipped_sorted:
+            lines += _render_skipped_entry(item)
     text_body = "\n".join(lines)
 
     flagged_html = "".join(_render_html_entry(item) for item in flagged_sorted)
@@ -242,11 +306,19 @@ def build_lausuntopyynto_digest(
         if borderline_sorted
         else ""
     )
+    skipped_section_html = (
+        f"""
+  <h2 style="color:#888;margin-bottom:4px;margin-top:32px;font-size:16px;">Ohitetut</h2>
+  <p style="color:#888;margin-top:0;font-size:12px;">Ei toimenpiteitä &ndash; jakelussa tai jo vastattu</p>
+  {_render_skipped_html(skipped_sorted)}"""
+        if skipped_sorted
+        else ""
+    )
 
     html_body = f"""<!DOCTYPE html>
 <html lang="fi">
 <head><meta charset="utf-8"><title>{subject}</title></head>
-<body style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px;color:#222;">{flagged_section_html}{borderline_section_html}
+<body style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px;color:#222;">{flagged_section_html}{borderline_section_html}{skipped_section_html}
   <hr style="border:none;border-top:1px solid #ddd;margin:32px 0 16px;">
 {_footer_html()}
 </body>

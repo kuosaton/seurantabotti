@@ -264,6 +264,47 @@ def test_build_lausuntopyynto_digest_flagged_only_omits_borderline_header() -> N
     assert "Rajatapauksia" not in html_body
 
 
+def test_build_lausuntopyynto_digest_renders_skipped_footnote() -> None:
+    deadline = date.today() + timedelta(days=10)
+    skipped = [
+        {
+            "proposal": SimpleNamespace(
+                title="Jakelussa oleva lausuntopyyntö",
+                organization_name="Ministeriö",
+                published_on=datetime(2026, 4, 1),
+                deadline=datetime.combine(deadline, datetime.min.time()),
+                url="https://example.invalid/skipped",
+            ),
+            "reason": "jakelu",
+        },
+        {
+            "proposal": SimpleNamespace(
+                title="Jo vastattu lausuntopyyntö",
+                organization_name="Virasto",
+                published_on=datetime(2026, 4, 2),
+                deadline=None,
+                url="https://example.invalid/responded",
+            ),
+            "reason": "already_responded",
+        },
+    ]
+
+    _, html_body, text_body = email_mod.build_lausuntopyynto_digest([], skipped=skipped)
+    deadline_str = f"{deadline.day}.{deadline.month}.{deadline.year}"
+
+    assert "Ohitetut (2 kpl, ei toimenpiteitä" in text_body
+    assert "Jakelussa oleva lausuntopyyntö" in text_body
+    assert "Pyytäjä:   Ministeriö" in text_body
+    assert f"Määräaika: {deadline_str}" in text_body
+    assert "Syy:       Jakelussa" in text_body
+    assert "Jo vastattu lausuntopyyntö" in text_body
+    assert "Syy:       Jo vastattu" in text_body
+    assert "Ohitetut" in html_body
+    assert "https://example.invalid/skipped" in html_body
+    assert "Ministeriö" in html_body
+    assert deadline_str in html_body
+
+
 def test_build_valiokunta_digest_handles_empty_and_linked_items() -> None:
     committee_items = {
         "talousvaliokunta": [

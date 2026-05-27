@@ -86,9 +86,13 @@ def _record_result(p: Proposal, result: dict, notified: bool, seen: dict) -> Non
 
 
 def _deliver_digest(
-    flagged: list[dict], dry_run: bool, borderline: list[dict] | None = None
+    flagged: list[dict],
+    dry_run: bool,
+    borderline: list[dict] | None = None,
+    skipped: list[dict] | None = None,
 ) -> bool:
     borderline = borderline or []
+    skipped = skipped or []
     if flagged:
         print(f"\n{len(flagged)} item(s) above threshold:")
         for item in sorted(flagged, key=lambda x: -x["score"]):
@@ -97,7 +101,11 @@ def _deliver_digest(
         print(f"\n{len(borderline)} borderline item(s) (score 4-5):")
         for item in sorted(borderline, key=lambda x: -x["score"]):
             print(f"  [{item['score']}/10] {item['proposal'].title}")
-    subject, html_body, text_body = build_lausuntopyynto_digest(flagged, borderline)
+    if skipped:
+        print(f"\n{len(skipped)} skipped item(s) (no action - jakelu / already responded):")
+        for item in skipped:
+            print(f"  [SKIP {item['reason']}] {item['proposal'].title}")
+    subject, html_body, text_body = build_lausuntopyynto_digest(flagged, borderline, skipped)
     print(f"\nSubject: {subject}")
     print(text_body)
     if dry_run:
@@ -121,9 +129,10 @@ def _score_lausuntopyynto_proposals(
     new_proposals: list[Proposal],
     ctx: dict,
     seen: dict,
-) -> tuple[list[dict], list[dict], list[tuple[Proposal, dict]]]:
+) -> tuple[list[dict], list[dict], list[tuple[Proposal, dict]], list[dict]]:
     flagged = []
     borderline = []
+    skipped: list[dict] = []
     scored_results: list[tuple[Proposal, dict]] = []
 
     with httpx.Client() as client:
@@ -144,6 +153,7 @@ def _score_lausuntopyynto_proposals(
                     "status": f"skipped_{skip_reason}",
                     "published_on": p.published_on.isoformat(),
                 }
+                skipped.append({"proposal": p, "reason": skip_reason})
                 continue
 
             score = result["score"]
@@ -159,7 +169,7 @@ def _score_lausuntopyynto_proposals(
             else:
                 print(f"  [DROP {score}/10] {p.title}")
 
-    return flagged, borderline, scored_results
+    return flagged, borderline, scored_results, skipped
 
 
 def _record_lausuntopyynto_results(
@@ -201,14 +211,16 @@ def cmd_lausuntopyynnot(dry_run: bool, ctx: dict | None = None) -> None:
         print("Aborted.")
         return
 
-    flagged, borderline, scored_results = _score_lausuntopyynto_proposals(new_proposals, ctx, seen)
+    flagged, borderline, scored_results, skipped = _score_lausuntopyynto_proposals(
+        new_proposals, ctx, seen
+    )
 
-    if not flagged and not borderline:
+    if not flagged and not borderline and not skipped:
         _record_lausuntopyynto_results(scored_results, digest_sent=False, seen=seen)
         _save_json(config.SEEN_PROPOSALS_PATH, seen)
         print("No items above log threshold.")
         return
 
-    digest_sent = _deliver_digest(flagged, dry_run, borderline=borderline)
+    digest_sent = _deliver_digest(flagged, dry_run, borderline=borderline, skipped=skipped)
     _record_lausuntopyynto_results(scored_results, digest_sent, seen)
     _save_json(config.SEEN_PROPOSALS_PATH, seen)

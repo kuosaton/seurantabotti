@@ -130,7 +130,7 @@ def test_cmd_preview_digest_valid_deadline_parsed(state_paths, monkeypatch) -> N
     monkeypatch.setattr(
         main,
         "build_lausuntopyynto_digest",
-        lambda flagged, borderline=None: captured.extend(flagged) or ("S", "H", "T"),
+        lambda flagged, borderline=None, skipped=None: captured.extend(flagged) or ("S", "H", "T"),
     )
     main.cmd_preview_digest()
     # Valid ISO date strings are parsed into datetime objects
